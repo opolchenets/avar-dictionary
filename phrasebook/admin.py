@@ -1,15 +1,7 @@
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
-from import_export import resources
 from .models import PhrasebookSection, PhrasebookPhrase
-
-class PhrasebookSectionResource(resources.ModelResource):
-    class Meta:
-        model = PhrasebookSection
-
-class PhrasebookPhraseResource(resources.ModelResource):
-    class Meta:
-        model = PhrasebookPhrase
+from .resources import PhrasebookSectionResource, PhrasebookPhraseResource
 
 @admin.register(PhrasebookSection)
 class PhrasebookSectionAdmin(ImportExportModelAdmin):
