@@ -1,6 +1,28 @@
 {% extends "website/base.html" %}
 {% block title %}Contact – Avaro-English{% endblock %}
 {% block content %}
-<h1>Contact</h1>
-<p>Get in touch with us at <a href="mailto:example@example.com">example@example.com</a>.</p>
+<section class="page-shell contact-page">
+  <div class="page-header">
+    <div>
+      <p class="section-kicker">Let’s connect</p>
+      <h1 class="page-title">Contact</h1>
+      <p class="page-intro">Share ideas, corrections, or collaboration opportunities with the Avar language team.</p>
+    </div>
+    <div class="page-emblem" aria-hidden="true">✉️</div>
+  </div>
+  <div class="contact-card">
+    <h2>Write to us</h2>
+    <p>Get in touch with us at <a href="mailto:example@example.com">example@example.com</a>.</p>
+    <div class="contact-details">
+      <div>
+        <span class="contact-label">Community</span>
+        <span>Telegram and email updates</span>
+      </div>
+      <div>
+        <span class="contact-label">Contributions</span>
+        <span>Share words, corrections, and feedback</span>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}
