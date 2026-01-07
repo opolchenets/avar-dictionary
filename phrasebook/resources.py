@@ -13,5 +13,13 @@ class PhrasebookPhraseResource(resources.ModelResource):
         widget=ForeignKeyWidget(PhrasebookSection, 'name')
     )
     
+    def get_fields(self, **kwargs):
+        fields = super().get_fields(**kwargs)
+        # Удаляем section_id, если он есть
+        return [f for f in fields if f.attribute != 'section_id']
+    
     class Meta:
         model = PhrasebookPhrase
+        fields = ('id', 'section', 'text', 'translation', 'translit')
+        exclude = ('section_id',)
+        import_id_fields = []

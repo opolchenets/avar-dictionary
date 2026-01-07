@@ -96,7 +96,7 @@ def main() -> int:
     args = parse_args()
     if not args.input.exists():
         raise SystemExit(f"Input file not found: {args.input}")
-
+    
     writer, output_handle = build_writer(args.output)
     try:
         writer.writerow(["section", "text", "translation", "translit"])
