@@ -35,6 +35,10 @@ class Word(models.Model):
         verbose_name_plural = 'Слова'
         unique_together = ('text', 'language', 'part_of_speech')
         ordering = ['language', 'text']
+        indexes = [
+            models.Index(fields=['language', 'text']),
+            models.Index(fields=['part_of_speech']),
+        ]
 
     def __str__(self):
         return f"{self.text} ({self.language.code})"
@@ -50,6 +54,10 @@ class Translation(models.Model):
         verbose_name_plural = 'Переводы'
         unique_together = ('from_word', 'to_word')
         ordering = ['from_word', 'to_word']
+        indexes = [
+            models.Index(fields=['from_word']),
+            models.Index(fields=['to_word']),
+        ]
 
     def __str__(self):
         return f"{self.from_word} → {self.to_word}"
@@ -64,6 +72,9 @@ class Example(models.Model):
         verbose_name = 'Пример'
         verbose_name_plural = 'Примеры'
         ordering = ['word', 'id']
+        indexes = [
+            models.Index(fields=['word']),
+        ]
 
     def __str__(self):
         return f"{self.text[:40]}..."
@@ -77,6 +88,10 @@ class Synonym(models.Model):
         verbose_name_plural = 'Синонимы'
         unique_together = (('word1', 'word2'),)
         ordering = ['word1', 'word2']
+        indexes = [
+            models.Index(fields=['word1']),
+            models.Index(fields=['word2']),
+        ]
 
     def __str__(self):
         return f"{self.word1} ~ {self.word2}"

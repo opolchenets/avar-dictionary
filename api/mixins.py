@@ -21,6 +21,7 @@ class QueryParamsFilterMixin:
                 queryset = queryset.filter(**{lookup: value})
         return queryset
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
+        """Return the base queryset filtered by mapped query params."""
         queryset = super().get_queryset()
         return self.filter_queryset_by_params(queryset)
