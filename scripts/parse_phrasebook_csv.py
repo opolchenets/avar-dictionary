@@ -15,8 +15,20 @@ def normalize_text(text: str) -> str:
     text = text.strip()
     text = LEADING_INDEX_PATTERN.sub('', text)
     text = text.strip()
-    if text.startswith('"') and text.endswith('"') and len(text) > 1:
-        text = text[1:-1]
+    if text.startswith('"'):
+        text = text[1:]
+    if text.endswith('"'):
+        text = text[:-1]
+    return text.strip()
+
+def normalize_translation(text: str) -> str:
+    text = text.strip()
+    text = LEADING_INDEX_PATTERN.sub('', text)
+    text = text.strip()
+    if text.startswith('"'):
+        text = text[1:]
+    if text.endswith('"'):
+        text = text[:-1]
     return text.strip()
 
 def parse_line(line: str, line_number: int) -> tuple[str, str]:
@@ -27,7 +39,7 @@ def parse_line(line: str, line_number: int) -> tuple[str, str]:
     match = LINE_PATTERN.match(line)
     if match:
         text = normalize_text(match.group(2))
-        translation = match.group(4).strip().replace('""', '"')
+        translation = normalize_translation(match.group(4).strip().replace('""', '"'))
         return text, translation
 
     for row in csv.reader([line]):
@@ -39,7 +51,9 @@ def parse_line(line: str, line_number: int) -> tuple[str, str]:
                 translation = row[-1].strip()
             else:
                 translation = row[1].strip()
-            translation = translation.strip('"').replace('""', '"')
+            translation = normalize_translation(
+                translation.strip('"').replace('""', '"')
+            )
             return text, translation
 
     raise ValueError(f"Line {line_number} does not match expected format: {line}")
