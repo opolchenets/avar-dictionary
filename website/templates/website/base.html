@@ -7,7 +7,7 @@
   <title>{% block title %}Avaro-English{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Spectral:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Spectral:wght@500;600;700&family=Rubik:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'website/css/styles.css' %}">
 </head>
 <body>
@@ -17,8 +17,11 @@
       <div class="header-pattern" aria-hidden="true"></div>
       <div class="container header-bar">
         <a href="{% url 'home' %}" class="logo">
-          <span class="logo-kicker">Avar Language ↔ English</span>
-          <span class="logo-title">Avaro-English</span>
+          <img src="{% static 'website/images/logo-mark.svg' %}" alt="" class="logo-mark">
+          <span class="logo-text">
+            <span class="logo-kicker">Avar Language Portal</span>
+            <span class="logo-title">SaidoBavar</span>
+          </span>
         </a>
         <button class="btn-menu" aria-label="Toggle menu">☰</button>
         <nav class="site-nav" aria-label="Primary navigation">
@@ -27,7 +30,7 @@
           <a href="{% url 'grammar' %}">Grammar</a>
           <a href="{% url 'names' %}">Names</a>
           <a href="{% url 'about' %}">About</a>
-          <a href="{% url 'contact' %}" class="nav-cta">Contact</a>
+          <a href="{% url 'contact' %}" class="nav-cta">Contribute word</a>
         </nav>
         <div class="lang-switcher">
           <button class="btn-lang" type="button" aria-haspopup="true" aria-expanded="false">
@@ -52,7 +55,7 @@
     <footer class="site-footer">
       <div class="container footer-inner">
         <div>
-          <span class="footer-brand">Avaro-English</span>
+          <span class="footer-brand">SaidoBavar</span>
           <p class="footer-text">A digital home for learning and celebrating the Avar language.</p>
         </div>
         <div class="footer-meta">
@@ -63,7 +66,7 @@
           <a href="{% url 'about' %}">About</a>
           <a href="{% url 'contact' %}">Contact</a>
         </div>
-        <p class="footer-copy">© {% now "Y" %} Avaro-English</p>
+        <p class="footer-copy">© {% now "Y" %} SaidoBavar</p>
       </div>
     </footer>
   </div>

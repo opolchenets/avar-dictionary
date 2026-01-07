@@ -1,60 +1,104 @@
 {% extends "website/base.html" %}
-{% block title %}Home – Avaro-English{% endblock %}
+{% block title %}Home – SaidoBavar{% endblock %}
 
 {% block content %}
 <section class="hero">
   <div class="hero-inner">
-    <span class="hero-kicker">Avar Language • Heritage</span>
-    <h1 class="hero-title">A modern portal for exploring the Avar language</h1>
-    <p class="hero-lede">We blend the spirit of the Caucasus highlands with digital craft so the living voice of Avar speech stays vibrant, discoverable, and ready to share.</p>
+    <div class="hero-content">
+      <span class="hero-kicker">Avar Language • Heritage</span>
+      <h1 class="hero-title">Avar Language · <span>Сайт об Аварском</span></h1>
+      <p class="hero-lede">Современный портал об аварском языке: поиск слов, фразы и грамматика в удобном цифровом формате.</p>
 
-    <div class="hero-actions">
-      <form method="get" action="{% url 'dictionary' %}" class="hero-search">
-        <input type="search" name="q" placeholder="Search for a word or root…" required>
-        <button type="submit">Search the dictionary</button>
-      </form>
-      <div class="hero-footnote">
-        <span>🧭 Active visitors now: {{ active_visitors }}</span>
-        <span>🌞 Unique visitors today: {{ unique_visitors_today }}</span>
-        <span>⛰️ Avar heritage in a digital format</span>
+      <div class="hero-actions">
+        <form method="get" action="{% url 'dictionary' %}" class="hero-search">
+          <label class="sr-only" for="hero-search">Search</label>
+          <input id="hero-search" type="search" name="q" placeholder="Search Avar" required>
+          <select name="direction" aria-label="Translation direction">
+            <option value="av-en">Avar → English</option>
+            <option value="en-av">English → Avar</option>
+          </select>
+          <button type="submit">Search</button>
+        </form>
+        <div class="hero-footnote">
+          <span>Active visitors now: {{ active_visitors }}</span>
+          <span>Words in dictionary: 12,345</span>
+          <span>Since 2024 · Heritage online</span>
+        </div>
       </div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <img src="{% static 'website/images/hero-illustration.svg' %}" alt="">
     </div>
   </div>
 </section>
 
-<div class="card-grid">
-  <a href="{% url 'dictionary' %}" class="card">
-    <div class="card-icon">📖</div>
-    <div class="card-label">Dictionary</div>
-  </a>
-  <a href="{% url 'phrasebook' %}" class="card">
-    <div class="card-icon">💬</div>
-    <div class="card-label">Phrasebook</div>
-  </a>
-  <a href="{% url 'grammar' %}" class="card">
-    <div class="card-icon">📚</div>
-    <div class="card-label">Grammar</div>
-  </a>
-  <a href="{% url 'names' %}" class="card">
-    <div class="card-icon">👥</div>
-    <div class="card-label">Names</div>
-  </a>
-  <a href="{% url 'about' %}" class="card card-about">
-    <div class="card-icon">ℹ️</div>
-    <div class="card-label">About the project</div>
-  </a>
-</div>
+<section class="tools">
+  <div class="section-heading">
+    <span class="section-kicker">Tools for Avar learners</span>
+    <h2>Everything you need to learn</h2>
+  </div>
+  <div class="card-grid">
+    <a href="{% url 'dictionary' %}" class="card">
+      <div class="card-icon">📖</div>
+      <div class="card-label">Dictionary</div>
+      <p>Fast search with rich entries, roots, and examples.</p>
+      <span class="card-cta">Go to dictionary</span>
+    </a>
+    <a href="{% url 'phrasebook' %}" class="card">
+      <div class="card-icon">💬</div>
+      <div class="card-label">Phrasebook</div>
+      <p>Everyday expressions and curated conversational phrases.</p>
+      <span class="card-cta">Explore phrases</span>
+    </a>
+    <a href="{% url 'grammar' %}" class="card">
+      <div class="card-icon">📚</div>
+      <div class="card-label">Grammar</div>
+      <p>Clear patterns, declensions, and grammar insights.</p>
+      <span class="card-cta">Study grammar</span>
+    </a>
+    <a href="{% url 'names' %}" class="card">
+      <div class="card-icon">🔤</div>
+      <div class="card-label">Names</div>
+      <p>Beautiful Avar names with meaning and origin.</p>
+      <span class="card-cta">View names</span>
+    </a>
+  </div>
+</section>
 
 <section class="culture-band">
   <div class="culture-band__header">
-    <span class="section-kicker">Culture &amp; craft</span>
-    <h2>The voice of Avar culture</h2>
+    <span class="section-kicker">The voice of Avar culture</span>
+    <h2>Culture, community, and preservation</h2>
   </div>
-  <p>Inspired by mountain landscapes, artisan patterns, and stories shared across generations, we are shaping a digital space where the Avar language feels warm, current, and welcoming.</p>
+  <p>Inspired by mountain landscapes and artisan patterns, we are shaping a digital home where the Avar language feels warm, current, and welcoming.</p>
   <ul class="culture-points">
-    <li><strong>Practical tools.</strong> Explore dictionary entries, phrasebook examples, and grammar notes that connect Avar and English with ease.</li>
-    <li><strong>Community roots.</strong> Contribute words, share insights, and encourage fellow learners on every step of their journey.</li>
-    <li><strong>Preserving heritage.</strong> Every search and shared phrase strengthens the future of the Avar language.</li>
+    <li><strong>Practical tools.</strong> Dictionary, phrasebook, and grammar in one place.</li>
+    <li><strong>Community roots.</strong> Anyone can submit a word or example.</li>
+    <li><strong>Preserving heritage.</strong> Each search strengthens the language’s future.</li>
   </ul>
+</section>
+
+<section class="action-row">
+  <a class="action-card" href="{% url 'contact' %}">
+    <div class="action-icon">🛠️</div>
+    <div>
+      <h3>Report an error</h3>
+      <p>Help us keep the dictionary accurate.</p>
+    </div>
+  </a>
+  <a class="action-card" href="{% url 'contact' %}">
+    <div class="action-icon">➕</div>
+    <div>
+      <h3>Suggest a word</h3>
+      <p>Share a new entry or phrase for review.</p>
+    </div>
+  </a>
+  <a class="action-card" href="{% url 'about' %}">
+    <div class="action-icon">✨</div>
+    <div>
+      <h3>Share project</h3>
+      <p>Spread the word about the Avar language.</p>
+    </div>
+  </a>
 </section>
 {% endblock %}
