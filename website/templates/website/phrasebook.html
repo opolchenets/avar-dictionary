@@ -1,42 +1,50 @@
 {% extends "website/base.html" %}
 {% block title %}Phrasebook – Avaro-English{% endblock %}
 {% block content %}
-<h1 class="page-title">Phrasebook</h1>
-<p class="page-intro">Browse essential Avar phrases with translations and transliteration notes where available.</p>
-
-{% if sections %}
-  <div class="phrasebook-list">
-    {% for section in sections %}
-      <section class="phrasebook-section">
-        <h2 class="phrasebook-section__title">{{ section.name }}</h2>
-        {% with section.phrases.all as phrases %}
-        {% if phrases %}
-          <table class="phrasebook-table">
-            <thead>
-              <tr>
-                <th scope="col">Avar</th>
-                <th scope="col">Translation</th>
-                <th scope="col">Transliteration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for phrase in phrases %}
-                <tr>
-                  <td data-label="Avar">{{ phrase.text }}</td>
-                  <td data-label="Translation">{{ phrase.translation }}</td>
-                  <td data-label="Transliteration">{{ phrase.translit|default:"—" }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <p class="phrasebook-empty">There are no phrases in this section yet.</p>
-        {% endif %}
-        {% endwith %}
-      </section>
-    {% endfor %}
+<section class="page-shell phrasebook-page">
+  <div class="page-header">
+    <div>
+      <p class="section-kicker">Conversation</p>
+      <h1 class="page-title">Phrasebook</h1>
+      <p class="page-intro">Browse essential Avar phrases with translations and transliteration notes where available.</p>
+    </div>
+    <div class="page-emblem" aria-hidden="true">💬</div>
   </div>
-{% else %}
-  <p class="phrasebook-empty">Phrasebook sections have not been added yet.</p>
-{% endif %}
+
+  {% if sections %}
+    <div class="phrasebook-list">
+      {% for section in sections %}
+        <section class="phrasebook-section">
+          <h2 class="phrasebook-section__title">{{ section.name }}</h2>
+          {% with section.phrases.all as phrases %}
+          {% if phrases %}
+            <table class="phrasebook-table">
+              <thead>
+                <tr>
+                  <th scope="col">Avar</th>
+                  <th scope="col">Translation</th>
+                  <th scope="col">Transliteration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for phrase in phrases %}
+                  <tr>
+                    <td data-label="Avar">{{ phrase.text }}</td>
+                    <td data-label="Translation">{{ phrase.translation }}</td>
+                    <td data-label="Transliteration">{{ phrase.translit|default:"—" }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <p class="phrasebook-empty">There are no phrases in this section yet.</p>
+          {% endif %}
+          {% endwith %}
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="phrasebook-empty">Phrasebook sections have not been added yet.</p>
+  {% endif %}
+</section>
 {% endblock %}

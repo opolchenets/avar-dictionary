@@ -2,8 +2,15 @@
 {% load static %}
 {% block title %}Dictionary – Avaro-English{% endblock %}
 {% block content %}
-<section class="dictionary-page">
-  <h1 class="page-title">Dictionary</h1>
+<section class="page-shell dictionary-page">
+  <div class="page-header">
+    <div>
+      <p class="section-kicker">Lexicon</p>
+      <h1 class="page-title">Dictionary</h1>
+      <p class="page-intro">Search Avar words, roots, and translations across the living archive.</p>
+    </div>
+    <div class="page-emblem" aria-hidden="true">⛰️</div>
+  </div>
   <form id="searchForm" class="search-section">
     <input type="search" id="searchInput" class="search-input" placeholder="Search...">
     <button id="directionToggle" type="button" class="search-btn direction-btn">av→en</button>

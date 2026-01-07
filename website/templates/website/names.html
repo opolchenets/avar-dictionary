@@ -1,49 +1,57 @@
 {% extends "website/base.html" %}
 {% block title %}Avar Names – Avaro-English{% endblock %}
 {% block content %}
-<h1 class="page-title">Avar Names</h1>
-<p class="page-intro">Discover Avar names alongside translations, notes, and gender markers. Add categories and names through the admin to keep the collection growing.</p>
-
-{% if categories %}
-  <div class="names-list">
-    {% for category in categories %}
-      <section class="names-section">
-        <h2 class="names-section__title">{{ category.name }}</h2>
-        {% if category.description %}
-          <p class="names-section__description">{{ category.description }}</p>
-        {% endif %}
-        {% with category.names.all as names %}
-          {% if names %}
-            <table class="names-table">
-              <thead>
-                <tr>
-                  <th scope="col">Name</th>
-                  <th scope="col">Translation</th>
-                  <th scope="col">Gender</th>
-                  <th scope="col">Transliteration</th>
-                  <th scope="col">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for name in names %}
-                  <tr>
-                    <td data-label="Name">{{ name.name }}</td>
-                    <td data-label="Translation">{{ name.translation }}</td>
-                    <td data-label="Gender"><span class="names-badge names-badge--{{ name.gender }}">{{ name.get_gender_display }}</span></td>
-                    <td data-label="Transliteration">{{ name.translit|default:"—" }}</td>
-                    <td data-label="Notes">{{ name.notes|default:"—" }}</td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <p class="names-empty">There are no names in this category yet.</p>
-          {% endif %}
-        {% endwith %}
-      </section>
-    {% endfor %}
+<section class="page-shell names-page">
+  <div class="page-header">
+    <div>
+      <p class="section-kicker">Identity</p>
+      <h1 class="page-title">Avar Names</h1>
+      <p class="page-intro">Discover Avar names alongside translations, notes, and gender markers. Add categories and names through the admin to keep the collection growing.</p>
+    </div>
+    <div class="page-emblem" aria-hidden="true">👥</div>
   </div>
-{% else %}
-  <p class="names-empty">Name categories have not been added yet.</p>
-{% endif %}
+
+  {% if categories %}
+    <div class="names-list">
+      {% for category in categories %}
+        <section class="names-section">
+          <h2 class="names-section__title">{{ category.name }}</h2>
+          {% if category.description %}
+            <p class="names-section__description">{{ category.description }}</p>
+          {% endif %}
+          {% with category.names.all as names %}
+            {% if names %}
+              <table class="names-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Translation</th>
+                    <th scope="col">Gender</th>
+                    <th scope="col">Transliteration</th>
+                    <th scope="col">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for name in names %}
+                    <tr>
+                      <td data-label="Name">{{ name.name }}</td>
+                      <td data-label="Translation">{{ name.translation }}</td>
+                      <td data-label="Gender"><span class="names-badge names-badge--{{ name.gender }}">{{ name.get_gender_display }}</span></td>
+                      <td data-label="Transliteration">{{ name.translit|default:"—" }}</td>
+                      <td data-label="Notes">{{ name.notes|default:"—" }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            {% else %}
+              <p class="names-empty">There are no names in this category yet.</p>
+            {% endif %}
+          {% endwith %}
+        </section>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="names-empty">Name categories have not been added yet.</p>
+  {% endif %}
+</section>
 {% endblock %}
