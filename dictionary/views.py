@@ -1,6 +1,7 @@
-from rest_framework import viewsets, filters
-from rest_framework.response import Response
+from rest_framework import filters, viewsets
 from rest_framework.decorators import api_view
+from rest_framework.request import Request
+from rest_framework.response import Response
 from django.db.models import Q
 
 from api.mixins import QueryParamsFilterMixin
@@ -13,18 +14,29 @@ from .serializers import (
     ExampleSerializer,
     SynonymSerializer,
 )
+from .services import (
+    build_word_search_queryset,
+    fetch_translations_for_words,
+    find_candidate_words,
+)
 
 class LanguageViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only viewset for language lookup."""
     queryset = Language.objects.all()
     serializer_class = LanguageSerializer
     pagination_class = None
 
 class WordViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Word.objects.all().select_related('language', 'lemma').prefetch_related('translations_from', 'examples', 'synonyms1', 'synonyms2')
+    """Read-only viewset for words with filters and search."""
+    queryset = (
+        Word.objects.all()
+        .select_related("language", "lemma")
+        .prefetch_related("translations_from", "examples", "synonyms1", "synonyms2")
+    )
     serializer_class = WordSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['text', 'transcription', 'alternative_spelling', 'description']
-    ordering_fields = ['text', 'created_at']
+    search_fields = ["text", "transcription", "alternative_spelling", "description"]
+    ordering_fields = ["text", "created_at"]
 
     query_params_map = {
         "language": "language__code",
@@ -32,7 +44,13 @@ class WordViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
     }
 
 class TranslationViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Translation.objects.select_related('from_word', 'to_word', 'from_word__language', 'to_word__language').all()
+    """Read-only viewset for translations."""
+    queryset = Translation.objects.select_related(
+        "from_word",
+        "to_word",
+        "from_word__language",
+        "to_word__language",
+    ).all()
     serializer_class = TranslationSerializer
 
     query_params_map = {
@@ -41,12 +59,14 @@ class TranslationViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
     }
 
 class ExampleViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Example.objects.select_related('word').all()
+    """Read-only viewset for examples."""
+    queryset = Example.objects.select_related("word").all()
     serializer_class = ExampleSerializer
     query_params_map = {"word_id": "word_id"}
 
 class SynonymViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
-    queryset = Synonym.objects.select_related('word1', 'word2').all()
+    """Read-only viewset for synonyms."""
+    queryset = Synonym.objects.select_related("word1", "word2").all()
     serializer_class = SynonymSerializer
 
     query_params_map = {
@@ -54,53 +74,35 @@ class SynonymViewSet(QueryParamsFilterMixin, viewsets.ReadOnlyModelViewSet):
     }
 
 # Поиск по слову с фильтрами
-@api_view(['GET'])
-def search_words(request):
-    q = request.GET.get('q', '').strip()
-    lang = request.GET.get('language')
-    qs = Word.objects.select_related('language').all()
-    if q:
-        qs = qs.filter(
-            Q(text__icontains=q) |
-            Q(transcription__icontains=q) |
-            Q(alternative_spelling__icontains=q) |
-            Q(description__icontains=q)
-        )
-    if lang:
-        qs = qs.filter(language__code=lang)
-    serializer = WordShortSerializer(qs[:30], many=True)
+@api_view(["GET"])
+def search_words(request: Request) -> Response:
+    """Return short word matches by query and language code."""
+    query = request.GET.get("q", "").strip()
+    language_code = request.GET.get("language")
+    queryset = build_word_search_queryset(query, language_code)
+    serializer = WordShortSerializer(queryset[:30], many=True)
     return Response(serializer.data)
 
 # Быстрый перевод (от слова к переводам)
-@api_view(['GET'])
-def quick_translate(request):
-    word = request.GET.get('word', '').strip()
-    src = request.GET.get('from')
-    tgt = request.GET.get('to')
-    if not (word and src and tgt):
-        return Response({'error': 'Required: word, from, to'}, status=400)
-    word_qs = Word.objects.filter(language__code=src)
-    if word:
-        word_qs = word_qs.filter(text__istartswith=word)
-    word_qs = word_qs.order_by('text')
+@api_view(["GET"])
+def quick_translate(request: Request) -> Response:
+    """Return translations for a word prefix in both directions."""
+    word = request.GET.get("word", "").strip()
+    source = request.GET.get("from")
+    target = request.GET.get("to")
+    if not (word and source and target):
+        return Response({"error": "Required: word, from, to"}, status=400)
+    word_qs = find_candidate_words(word, source)
     if not word_qs.exists():
         return Response([])
 
-    word_ids = list(word_qs.values_list('id', flat=True)[:20])
-    translations = Translation.objects.filter(
-        from_word_id__in=word_ids,
-        to_word__language__code=tgt
-    ).select_related('to_word', 'to_word__language', 'from_word', 'from_word__language')
-
-    reverse_translations = Translation.objects.filter(
-        to_word_id__in=word_ids,
-        from_word__language__code=tgt
-    ).select_related('to_word', 'to_word__language', 'from_word', 'from_word__language')
+    word_ids = list(word_qs.values_list("id", flat=True)[:20])
+    translations, reverse_translations = fetch_translations_for_words(word_ids, target)
 
     data = TranslationSerializer(translations, many=True).data
     reverse_data = TranslationSerializer(reverse_translations, many=True).data
     for item in reverse_data:
-        item['from_word'], item['to_word'] = item['to_word'], item['from_word']
+        item["from_word"], item["to_word"] = item["to_word"], item["from_word"]
     data.extend(reverse_data)
 
     return Response(data)
