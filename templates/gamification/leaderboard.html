@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Лидерборд{% endblock %}
+
+{% block content %}
+<div style="max-width: 960px; margin: 0 auto;">
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Рейтинг участников</p>
+      <h1>Лидерборд переводчиков</h1>
+    </div>
+  </section>
+
+  <div class="podium-grid">
+    {% if leaders %}
+      {% for leader in leaders|slice:":3" %}
+        <article class="card podium-card podium-{{ forloop.counter }}">
+          <div class="podium-top">
+            {% if forloop.counter == 1 %}🏆{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}
+          </div>
+          <p class="eyebrow">{{ forloop.counter }} место</p>
+          <h2>{{ leader.display_name }}</h2>
+          <p class="podium-points">{{ leader.total_points }} очков</p>
+          <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; color: var(--muted); font-weight: 600;">
+            <span>{{ leader.accepted_count }} принятых</span>
+          </div>
+        </article>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <section class="panel" style="padding: 0; overflow: hidden;">
+    {% if leaders %}
+      <div style="padding: 1.5rem 1.5rem 0.5rem; border-bottom: 1px solid var(--line); background: var(--soft);">
+        <div class="leader-row" style="font-weight: 700; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; border-bottom: none;">
+          <span>Ранг</span>
+          <span>Переводчик</span>
+          <span style="text-align: right;">Очки</span>
+        </div>
+      </div>
+      {% for leader in leaders %}
+        <div class="leader-row">
+          <span class="rank-circle">{{ forloop.counter }}</span>
+          <div style="display: flex; flex-direction: column;">
+            <strong style="font-size: 1.05rem;">{{ leader.display_name }}</strong>
+            <span style="font-size: 0.85rem; color: var(--muted); font-weight: 500;">
+              {{ leader.translation_count }} основных · {{ leader.suggestion_count }} предложений
+            </span>
+          </div>
+          <span style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--accent);">{{ leader.total_points }}</span>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="padding: 4rem 2rem; text-align: center;">
+        <p class="empty-state">Лидерборд появится после первых начислений очков.</p>
+      </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

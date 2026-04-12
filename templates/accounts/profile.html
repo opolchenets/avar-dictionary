@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль — {{ request.user.username }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Личный кабинет</p>
+      <h1>{{ request.user.profile.display_name|default:request.user.username }}</h1>
+    </div>
+    {% if request.user.is_staff or request.user.profile.is_editor %}
+      <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+    {% endif %}
+  </section>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span>{{ total_points }}</span>
+      <p>всего очков</p>
+    </div>
+    <div class="stat-card">
+      <span>{{ translations_count }}</span>
+      <p>основных переводов</p>
+    </div>
+    <div class="stat-card">
+      <span>{{ suggestions_count }}</span>
+      <p>предложенных правок</p>
+    </div>
+    <div class="stat-card">
+      <span>{{ accepted_suggestions_count }}</span>
+      <p>принято правок</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Информация об аккаунте</h2>
+    <div style="display: grid; gap: 1rem;">
+      <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line);">
+        <span style="color: var(--muted); font-weight: 600;">Логин</span>
+        <span style="font-weight: 700;">{{ request.user.username }}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line);">
+        <span style="color: var(--muted); font-weight: 600;">Роль</span>
+        <span class="badge {% if request.user.profile.is_editor %}done{% endif %}">
+          {{ request.user.profile.get_role_display }}
+        </span>
+      </div>
+      <div style="display: flex; justify-content: space-between;">
+        <span style="color: var(--muted); font-weight: 600;">Дата регистрации</span>
+        <span style="font-weight: 700;">{{ request.user.date_joined|date:"d.m.Y" }}</span>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

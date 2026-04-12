@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Модерация правок{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto;">
+  <section class="section-head" style="margin-bottom: 2rem;">
+    <div>
+      <p class="eyebrow">Moderation</p>
+      <h1>Очередь правок</h1>
+    </div>
+  </section>
+
+  <div class="bulk-bar" style="background: var(--paper); padding: 0.75rem 1.25rem; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; border: 1px solid var(--line); position: sticky; top: 80px; z-index: 50; box-shadow: var(--shadow);">
+    <input type="checkbox" id="select-all" style="width: 18px; height: 18px; cursor: pointer;">
+    <span style="font-weight: 800; color: var(--muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Выбрать все</span>
+    <div style="margin-left: auto; display: flex; gap: 0.75rem;">
+      <button type="button" class="button" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="submitBulk('bulk_accept')">Принять выбранные</button>
+      <button type="button" class="button danger" style="padding: 0.5rem 1rem; font-size: 0.8rem;" onclick="submitBulk('bulk_reject')">Отклонить</button>
+    </div>
+  </div>
+
+  <form method="post" id="bulk-action-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="">
+    <input type="hidden" name="bulk_ids" id="bulk-ids-input" value="">
+  </form>
+
+  <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+    {% for suggestion in suggestions %}
+      <details class="mod-compact-card" style="border-radius: 10px; border: 1px solid var(--line); background: var(--paper);">
+        <summary style="display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1rem; cursor: pointer; list-style: none;">
+          <input type="checkbox" class="bulk-checkbox" value="{{ suggestion.id }}" onclick="event.stopPropagation()" style="width: 16px; height: 16px;">
+          <span style="font-family: monospace; font-weight: 800; color: var(--muted); font-size: 0.8rem;">#{{ suggestion.sentence.id }}</span>
+          <span style="flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ suggestion.sentence.source_text_av }}</span>
+          <span style="color: var(--accent); font-weight: 700; font-size: 0.9rem;">&rarr;</span>
+          <span style="flex: 1; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ suggestion.proposed_text_ru }}</span>
+          <span class="badge pending" style="font-size: 0.6rem; padding: 0.2rem 0.4rem;">{{ suggestion.vote_count }}</span>
+        </summary>
+
+        <div style="padding: 1.5rem; border-top: 1px solid var(--line); background: #fdfdfc; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+          <div>
+            <label class="mod-info-label">Оригинал</label>
+            <p style="font-size: 1.1rem; font-weight: 700; margin: 0 0 1rem;">{{ suggestion.sentence.source_text_av }}</p>
+            
+            {% if suggestion.sentence.text_ru %}
+              <label class="mod-info-label">Текущий перевод</label>
+              <p style="font-size: 0.95rem; color: var(--muted); margin: 0;">{{ suggestion.sentence.text_ru }}</p>
+            {% endif %}
+          </div>
+
+          <form method="post" class="stack">
+            {% csrf_token %}
+            <input type="hidden" name="id" value="{{ suggestion.id }}">
+            <div>
+              <label class="mod-info-label">Редактировать и принять</label>
+              <textarea name="edited_text" rows="2" style="font-weight: 600;">{{ suggestion.proposed_text_ru }}</textarea>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="button" type="submit" name="action" value="accept" style="flex: 2; padding: 0.5rem;">Принять</button>
+              <button class="button danger" type="submit" name="action" value="reject" style="flex: 1; padding: 0.5rem;">Отклонить</button>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--muted); display: flex; justify-content: space-between;">
+              <span>От: <strong>{{ suggestion.author.username }}</strong></span>
+              <a href="{% url 'editor-sentence-detail' suggestion.sentence.id %}" style="text-decoration: underline;">К предложению</a>
+            </div>
+          </form>
+        </div>
+      </details>
+    {% empty %}
+      <div style="text-align: center; padding: 4rem; color: var(--muted); font-weight: 600;">Очередь пуста</div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+document.getElementById('select-all').addEventListener('change', function(e) {
+  document.querySelectorAll('.bulk-checkbox').forEach(cb => cb.checked = e.target.checked);
+});
+function submitBulk(action) {
+  const ids = Array.from(document.querySelectorAll('.bulk-checkbox:checked')).map(cb => cb.value);
+  if (!ids.length) return alert('Выберите правки');
+  if (confirm('Выполнить действие для выбранных?')) {
+    document.getElementById('bulk-ids-input').value = ids.join(',');
+    document.querySelector('#bulk-action-form input[name="action"]').value = action;
+    document.getElementById('bulk-action-form').submit();
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Правила перевода — МацI{% endblock %}
+
+{% block content %}
+<div style="max-width: 720px; margin: 2rem auto; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 3rem; box-shadow: var(--shadow);">
+  <h1 style="margin-top: 0; font-size: 2.2rem; color: var(--ink); margin-bottom: 0.5rem;">Правила перевода</h1>
+  <p style="color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin-bottom: 2.5rem;">Краткое руководство по использованию корпуса, начислению очков и вводу аварских букв.</p>
+
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">1. Цветовая система статусов</h2>
+    <p style="line-height: 1.6; margin-bottom: 1rem;">Каждое предложение в нашем корпусе имеет свой статус, который легко определить по цвету бейджика:</p>
+    <ul style="list-style: none; padding: 0; display: grid; gap: 1rem;">
+      <li style="display: flex; gap: 1rem; align-items: flex-start;">
+        <span style="border-radius: 999px; background: rgba(166, 50, 50, 0.1); color: var(--danger); padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">Не переведено</span>
+        <span style="line-height: 1.4;">Предложение свободно. Вы можете стать первым, кто предложит для него правильный перевод на русский язык.</span>
+      </li>
+      <li style="display: flex; gap: 1rem; align-items: flex-start;">
+        <span style="border-radius: 999px; background: rgba(200, 150, 0, 0.15); color: #9d7b00; padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">На проверке</span>
+        <span style="line-height: 1.4;">Кто-то уже отправил вариант перевода, и он ожидает проверки редактором. Однако вы всё ещё можете предложить свою (возможно, более точную) версию.</span>
+      </li>
+      <li style="display: flex; gap: 1rem; align-items: flex-start;">
+        <span style="border-radius: 999px; background: rgba(43, 107, 69, 0.1); color: var(--success); padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">Переведено</span>
+        <span style="line-height: 1.4;">Редактор проверил и принял перевод. Предложение считается закрытым и попадёт в финальный датасет.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section style="margin-bottom: 2.5rem;">
+    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">2. Начисление очков и Лидерборд</h2>
+    <p style="line-height: 1.6; margin-bottom: 1rem;">
+      Мы ценим вклад каждого участника. За каждый <strong>принятый редактором</strong> перевод вам начисляется <strong>1 очко</strong>.
+    </p>
+    <p style="line-height: 1.6; margin-bottom: 0;">
+      Очки суммируются, и на их основе строится общий <a href="{% url 'leaderboard' %}" style="color: var(--accent); font-weight: 600;">рейтинг переводчиков (Лидерборд)</a>. Помните: качество важнее количества, так как отклонённые варианты не приносят очков.
+    </p>
+  </section>
+
+  <section>
+    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">3. Автоматическая «Аварская палочка» (Ӏ)</h2>
+    <p style="line-height: 1.6; margin-bottom: 1rem;">
+      В аварском языке активно используется кириллическая палочка <strong>Ӏ</strong> (U+04C0). Так как её нет на стандартных клавиатурах, пользователи часто заменяют её другими символами (например, английской `I` или цифрой `1`). 
+    </p>
+    <p style="line-height: 1.6; margin-bottom: 1rem;">
+      Для вашего удобства в нашем приложении работает <strong>автозамена</strong>. Если после букв <strong>г, к, т, х, ц, ч</strong> вы введёте один из следующих символов:
+    </p>
+    <div style="background: var(--soft); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem; display: flex; gap: 1.5rem; font-family: monospace; font-size: 1.2rem; justify-content: center;">
+      <span>|</span>
+      <span>l</span>
+      <span>I</span>
+      <span>1</span>
+      <span>!</span>
+    </div>
+    <p style="line-height: 1.6; margin-bottom: 0;">
+      Система моментально и незаметно превратит его в правильную кириллическую палочку <strong>Ӏ</strong>. Вам больше не нужно копировать её из других мест!
+    </p>
+  </section>
+
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Импорт предложений{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <p class="eyebrow">Editor</p>
+    <h1>Импорт аварских предложений</h1>
+  </div>
+</section>
+
+<section class="panel narrow">
+  <form method="post" enctype="multipart/form-data" class="stack">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="button">Импортировать</button>
+  </form>
+</section>
+{% endblock %}

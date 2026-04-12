@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Редактирование предложения{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <p class="eyebrow">Editor</p>
+    <h1>Предложение #{{ sentence.id }}</h1>
+  </div>
+</section>
+
+<section class="detail-grid">
+  <article class="panel" style="grid-column: 1 / -1;">
+    <h2>Редактировать предложение и перевод</h2>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {{ sentence_form.as_p }}
+      <div style="display: flex; gap: 1rem;">
+        <button type="submit" class="button" name="action" value="save_sentence">Сохранить изменения</button>
+        {% if sentence.text_ru %}
+          <button type="submit" class="button danger" name="action" value="delete_translation" onclick="return confirm('Удалить только перевод?')">Удалить только перевод</button>
+        {% endif %}
+      </div>
+    </form>
+  </article>
+</section>
+
+<section class="panel narrow">
+  <h2>Удаление предложения</h2>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="button danger" name="action" value="delete_sentence">Удалить предложение полностью</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Предложение #{{ sentence.id }}{% endblock %}
+
+{% block content %}
+<section class="section-head">
+  <div>
+    <p class="eyebrow">Предложение #{{ sentence.id }}</p>
+    <h1>{{ sentence.source_text_av }}</h1>
+  </div>
+  <a class="button ghost" href="{% url 'sentence-list' %}">Все предложения</a>
+</section>
+
+<section class="detail-grid">
+  <article class="panel">
+    <h2>Основной перевод</h2>
+    {% if sentence.text_ru %}
+      <p class="primary-translation">{{ sentence.text_ru }}</p>
+      {% if sentence.translated_by %}
+        <p class="subtle">Автор: {{ sentence.translated_by.profile.display_name|default:sentence.translated_by.username }}</p>
+      {% endif %}
+    {% else %}
+      <p class="empty-state">Пока никто не добавил перевод.</p>
+    {% endif %}
+  </article>
+
+  <article class="panel">
+    <h2>{% if sentence.text_ru %}Предложить вариант{% else %}Предложить перевод{% endif %}</h2>
+    {% if request.user.is_authenticated %}
+      <form method="post" class="stack">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="button">
+          {% if sentence.text_ru %}Предложить вариант{% else %}Предложить перевод{% endif %}
+        </button>
+      </form>
+    {% else %}
+      <p class="empty-state">Чтобы переводить и предлагать правки, нужно <a href="{% url 'login' %}?next={{ request.path }}">войти</a>.</p>
+    {% endif %}
+  </article>
+</section>
+
+<section class="panel">
+  <div class="section-head">
+    <h2>Предложенные переводы</h2>
+  </div>
+  {% if pending_suggestions %}
+    <div class="list-stack">
+      {% for suggestion in pending_suggestions %}
+        <article class="suggestion-card panel-inner">
+          <div class="sentence-meta">
+            <span class="badge">
+              {{ suggestion.get_status_display }}
+            </span>
+            <span>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</span>
+          </div>
+          <p>{{ suggestion.proposed_text_ru }}</p>
+          <div class="suggestion-footer">
+            <span class="vote-count">{{ suggestion.vote_count }} голосов</span>
+            {% if request.user.is_authenticated %}
+              <form method="post" action="{% url 'suggestion-vote-toggle' sentence.pk suggestion.pk %}" class="inline-form">
+                {% csrf_token %}
+                <button type="submit" class="button ghost small-button">
+                  {% if suggestion.user_voted %}Снять голос{% else %}Поддержать{% endif %}
+                </button>
+              </form>
+            {% else %}
+              <a class="subtle" href="{% url 'login' %}?next={{ request.path }}">Войдите, чтобы голосовать</a>
+            {% endif %}
+          </div>
+          {% if suggestion.editor_note %}
+            <p class="subtle">Комментарий редактора: {{ suggestion.editor_note }}</p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty-state">Пока нет предложенных вариантов.</p>
+  {% endif %}
+</section>
+
+{% if reviewed_suggestions %}
+  <section class="panel">
+    <div class="section-head">
+      <h2>Уже рассмотренные варианты</h2>
+    </div>
+    <div class="list-stack">
+      {% for suggestion in reviewed_suggestions %}
+        <article class="suggestion-card panel-inner">
+          <div class="sentence-meta">
+            <span class="badge {% if suggestion.status == 'accepted' %}done{% elif suggestion.status == 'rejected' %}rejected{% endif %}">
+              {{ suggestion.get_status_display }}
+            </span>
+            <span>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</span>
+          </div>
+          <p>{{ suggestion.proposed_text_ru }}</p>
+          <p class="subtle">Голосов: {{ suggestion.vote_count }}</p>
+          {% if suggestion.editor_note %}
+            <p class="subtle">Комментарий редактора: {{ suggestion.editor_note }}</p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

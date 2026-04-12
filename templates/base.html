@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Avar Corpus{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body class="{% block body_class %}workspace-page{% endblock %}">
+  <header class="site-header">
+    <div class="container header-row">
+      <a class="brand" href="{% url 'home' %}">Avar Corpus</a>
+      <nav class="site-nav">
+        <a href="{% url 'rules' %}">Правила</a>
+        <a href="{% url 'sentence-list' %}">Предложения</a>
+        <a href="{% url 'leaderboard' %}">Лидерборд</a>
+        {% if request.user.is_authenticated %}
+          <span class="badge">Очки: {{ user_total_points }}</span>
+          <a href="{% url 'profile' %}">Профиль</a>
+          {% if request.user.profile.is_editor or request.user.is_staff %}
+            <a href="{% url 'editor-dashboard' %}">Редактор</a>
+          {% endif %}
+          <form method="post" action="{% url 'logout' %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="link-button">Выйти</button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}">Войти</a>
+          <a class="button ghost" href="{% url 'signup' %}">Регистрация</a>
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="container">
+      {% include "includes/messages.html" %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer style="background: var(--paper); border-top: 1px solid var(--line); padding: 4rem 0; margin-top: 4rem;">
+    <div class="container" style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 4rem;">
+      <div>
+        <a class="brand" href="{% url 'home' %}" style="font-size: 1.6rem; display: block; margin-bottom: 1.5rem;">Авар МацI</a>
+        <p style="color: var(--muted); line-height: 1.6; font-size: 0.95rem; max-width: 320px;">
+          Открытая платформа для сохранения и развития аварского языка в цифровой среде. Присоединяйтесь к нашему сообществу!
+        </p>
+      </div>
+      <div>
+        <h4 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 1.5rem; color: var(--accent);">Навигация</h4>
+        <nav style="display: grid; gap: 0.75rem;">
+          <a href="{% url 'rules' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Правила</a>
+          <a href="{% url 'sentence-list' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Предложения</a>
+          <a href="{% url 'leaderboard' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Лидерборд</a>
+        </nav>
+      </div>
+      <div>
+        <h4 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 1.5rem; color: var(--accent);">Сообщество</h4>
+        <div style="display: flex; gap: 1.5rem; font-size: 1.5rem;">
+          <a href="https://t.me/Avaralogia" target="_blank" style="color: #24A1DE; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            <i class="fa-brands fa-telegram"></i>
+          </a>
+          <a href="https://www.instagram.com/ob.avarskom" target="_blank" style="color: #E4405F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            <i class="fa-brands fa-instagram"></i>
+          </a>
+          <a href="https://youtube.com/@AccountSaida?si=hSRxiOh8s0bL7CGX" target="_blank" style="color: #CD201F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+            <i class="fa-brands fa-youtube"></i>
+          </a>
+        </div>
+        <p style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--muted); font-weight: 600;">
+          Разработано Said & Community
+        </p>
+      </div>
+    </div>
+    <div class="container" style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 0.85rem;">
+      &copy; 2026 Авар МацI. Проект по сохранению и развитию языка.
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('submit', function(e) {
+      if (e.target.tagName === 'FORM') {
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (btn) {
+          if (btn.disabled) {
+            e.preventDefault();
+          } else {
+            setTimeout(() => { btn.disabled = true; }, 0);
+          }
+        }
+      }
+    });
+
+    document.addEventListener('input', function(e) {
+      if (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && e.target.type === 'text')) {
+        let val = e.target.value;
+        const regex = /([гктхцчГКТХЦЧ])[|lI1!]/g;
+        if (regex.test(val)) {
+          const selectionStart = e.target.selectionStart;
+          const selectionEnd = e.target.selectionEnd;
+          e.target.value = val.replace(regex, '$1Ӏ');
+          e.target.setSelectionRange(selectionStart, selectionEnd);
+        }
+      }
+    });
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
