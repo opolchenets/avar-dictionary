@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Авар МацI — Открытая платформа перевода{% endblock %}
+{% block title %}Avar Corpus — Открытый параллельный корпус{% endblock %}
 
 {% block content %}
-<div style="max-width: 1100px; margin: 0 auto; padding-bottom: 6rem;">
+<div style="max-width: 1000px; margin: 0 auto;">
   
   <!-- Section 1: Hero -->
   <section style="padding: 7rem 0 5rem; text-align: center;">
@@ -12,7 +12,7 @@
       Avar <span style="color: var(--accent);">Corpus</span>
     </h1>
     <p style="font-size: 1.4rem; color: var(--muted); line-height: 1.5; max-width: 600px; margin: 0 auto 4rem; font-weight: 500; animation: fadeInUp 1s ease-out;">
-      Присоединяйтесь к созданию крупнейшего в мире цифрового архива аварского языка. Ваш вклад помогает сохранить культуру для будущих поколений.
+      Присоединяйтесь к созданию крупнейшего в мире цифрового архива аварского языка. Переводите русские фразы на аварский и помогайте сохранять наследие.
     </p>
     
     <div style="display: flex; gap: 1.5rem; justify-content: center; animation: fadeInUp 1.2s ease-out; margin-bottom: 6rem;">
@@ -43,6 +43,12 @@
     </div>
   </section>
 
+  <!-- One Big Stat (Pulse) -->
+  <div class="big-stat-block" style="animation: fadeIn 1.8s ease-out; margin-bottom: 4rem;">
+    <span class="big-stat-value">{{ translated_count }}</span>
+    <span class="big-stat-label">Всего переведено на аварский</span>
+  </div>
+
   <!-- Section 3: Main Dashboard -->
   <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 2rem; align-items: start; margin-top: 2rem;">
     
@@ -64,12 +70,12 @@
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
             <h4 style="margin-bottom: 0.5rem;">Выбор</h4>
-            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Выбираете любое свободное предложение.</p>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Выбираете фразу на русском языке.</p>
           </div>
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">✍️</div>
             <h4 style="margin-bottom: 0.5rem;">Перевод</h4>
-            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Пишете вариант на русском языке.</p>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Пишете вариант на аварском языке.</p>
           </div>
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
@@ -87,8 +93,8 @@
         <div style="display: grid; gap: 1rem;">
           {% for trans in latest_translations %}
             <div style="padding: 1rem; background: var(--bg); border-radius: 12px;">
-              <p style="font-size: 0.9rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--ink);">{{ trans.source_text_av|truncatechars:60 }}</p>
-              <p style="font-size: 0.85rem; color: var(--muted); margin: 0;">{{ trans.text_ru|truncatechars:60 }}</p>
+              <p style="font-size: 0.9rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--ink);">{{ trans.source_text_ru|truncatechars:60 }}</p>
+              <p style="font-size: 0.85rem; color: var(--muted); margin: 0;">{{ trans.text_av|truncatechars:60 }}</p>
               <div style="margin-top: 0.6rem; font-size: 0.7rem; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Подтверждено</div>
             </div>
           {% empty %}
@@ -117,10 +123,10 @@
 
   </div>
 
-  <!-- Section 4: Community & Mission -->
+  <!-- Community Section -->
   <section style="margin-top: 6rem; display: grid; grid-template-columns: 1.2fr 1fr; gap: 4rem; align-items: center; text-align: left;">
     <div>
-      <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 1.5rem; letter-spacing: -0.02em; line-height: 1.1;">Развиваем <span style="color: var(--accent);">Авар МацI</span> вместе</h2>
+      <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 1.5rem; letter-spacing: -0.02em; line-height: 1.1;">Развиваем <span style="color: var(--accent);">Avar Corpus</span> вместе</h2>
       <p style="font-size: 1.2rem; line-height: 1.7; color: var(--muted); margin-bottom: 2rem;">
         Этот проект — общественная инициатива. Мы собираем данные, чтобы аварский язык жил в смартфонах, нейросетях и современных онлайн-сервисах. Мы строим фундамент цифрового будущего нашего языка.
       </p>

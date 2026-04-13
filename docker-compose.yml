@@ -14,7 +14,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
 
   web:
     build:
@@ -24,6 +24,8 @@ services:
     command: ["/app/docker/entrypoint.sh"]
     env_file:
       - .env
+    environment:
+      DJANGO_USE_POSTGRES: "True"
     depends_on:
       db:
         condition: service_healthy
@@ -31,7 +33,7 @@ services:
       - .:/app
       - /var/www/avar/static:/app/staticfiles
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
 
 volumes:
   postgres_data:

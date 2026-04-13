@@ -15,7 +15,7 @@ class TranslationSuggestion(models.Model):
         on_delete=models.CASCADE,
         related_name="suggestions",
     )
-    proposed_text_ru = models.TextField("Предлагаемый перевод")
+    proposed_text_av = models.TextField("Предлагаемый перевод")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -44,7 +44,7 @@ class TranslationSuggestion(models.Model):
         verbose_name_plural = "Предложенные правки"
 
     def __str__(self) -> str:
-        return f"{self.sentence_id}: {self.proposed_text_ru[:80]}"
+        return f"{self.sentence_id}: {self.proposed_text_av[:80]}"
 
 
 class SuggestionVote(models.Model):

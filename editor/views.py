@@ -54,7 +54,7 @@ class EditorSentenceListView(EditorRequiredMixin, ListView):
             q = self.filter_form.cleaned_data.get("q")
             status = self.filter_form.cleaned_data.get("status")
             if q:
-                queryset = queryset.filter(source_text_av__icontains=q)
+                queryset = queryset.filter(source_text_ru__icontains=q)
             if status and status != "all":
                 queryset = queryset.filter(status=status)
         return queryset.order_by("id")
@@ -76,7 +76,7 @@ class EditorSentenceListView(EditorRequiredMixin, ListView):
             return redirect(request.get_full_path())
 
         if action == "delete_translation":
-            sentence.text_ru = ""
+            sentence.text_av = ""
             sentence.translated_by = None
             if sentence.suggestions.filter(status=TranslationSuggestion.Status.PENDING).exists():
                 sentence.status = Sentence.Status.PENDING
@@ -86,19 +86,19 @@ class EditorSentenceListView(EditorRequiredMixin, ListView):
             messages.success(request, f"Перевод для предложения #{sentence_id} удалён.")
             return redirect(request.get_full_path())
 
-        text_av = request.POST.get("source_text_av", "").strip()
-        text_ru = request.POST.get("text_ru", "").strip()
-        
-        if text_av:
-            sentence.source_text_av = text_av
+        text_ru = request.POST.get("source_text_ru", "").strip()
+        text_av = request.POST.get("text_av", "").strip()
         
         if text_ru:
-            sentence.text_ru = text_ru
+            sentence.source_text_ru = text_ru
+        
+        if text_av:
+            sentence.text_av = text_av
             sentence.status = Sentence.Status.TRANSLATED
             if not sentence.translated_by:
                 sentence.translated_by = request.user
         else:
-            sentence.text_ru = ""
+            sentence.text_av = ""
             if sentence.suggestions.filter(status=TranslationSuggestion.Status.PENDING).exists():
                 sentence.status = Sentence.Status.PENDING
             else:
@@ -129,11 +129,11 @@ class SentenceImportView(EditorRequiredMixin, FormView):
             for row in reader:
                 if not row:
                     continue
-                av_text = row[0].strip()
-                if not av_text:
+                ru_text = row[0].strip() # Column 0 is RU
+                if not ru_text:
                     continue
-                ru_text = row[1].strip() if len(row) > 1 else ""
-                prepared.append((av_text, ru_text))
+                av_text = row[1].strip() if len(row) > 1 else "" # Column 1 is AV
+                prepared.append((ru_text, av_text))
         else:
             for line in raw_lines:
                 clean_line = line.strip()
@@ -142,27 +142,27 @@ class SentenceImportView(EditorRequiredMixin, FormView):
 
         seen = set()
         unique_prepared = []
-        for av_text, ru_text in prepared:
-            if av_text not in seen:
-                seen.add(av_text)
-                unique_prepared.append((av_text, ru_text))
+        for ru_text, av_text in prepared:
+            if ru_text not in seen:
+                seen.add(ru_text)
+                unique_prepared.append((ru_text, av_text))
 
         existing = set(
-            Sentence.objects.filter(source_text_av__in=[item[0] for item in unique_prepared]).values_list(
-                "source_text_av", flat=True
+            Sentence.objects.filter(source_text_ru__in=[item[0] for item in unique_prepared]).values_list(
+                "source_text_ru", flat=True
             )
         )
         
         new_sentences = []
-        for av_text, ru_text in unique_prepared:
-            if av_text not in existing:
-                status = Sentence.Status.TRANSLATED if ru_text else Sentence.Status.UNTRANSLATED
+        for ru_text, av_text in unique_prepared:
+            if ru_text not in existing:
+                status = Sentence.Status.TRANSLATED if av_text else Sentence.Status.UNTRANSLATED
                 new_sentences.append(
                     Sentence(
-                        source_text_av=av_text,
-                        text_ru=ru_text,
+                        source_text_ru=ru_text,
+                        text_av=av_text,
                         status=status,
-                        translated_by=self.request.user if ru_text else None
+                        translated_by=self.request.user if av_text else None
                     )
                 )
                 
@@ -214,10 +214,10 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
                 
                 for suggestion in suggestions:
                     if action == "bulk_accept":
-                        suggestion.sentence.text_ru = suggestion.proposed_text_ru
+                        suggestion.sentence.text_av = suggestion.proposed_text_av
                         suggestion.sentence.translated_by = suggestion.author
                         suggestion.sentence.status = Sentence.Status.TRANSLATED
-                        suggestion.sentence.save(update_fields=["text_ru", "translated_by", "status", "updated_at"])
+                        suggestion.sentence.save(update_fields=["text_av", "translated_by", "status", "updated_at"])
                         suggestion.status = TranslationSuggestion.Status.ACCEPTED
                         suggestion.reviewed_by = request.user
                         suggestion.reviewed_at = timezone.now()
@@ -255,15 +255,15 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
                 "author",
             ).get(pk=suggestion.pk)
             
-            if edited_text and edited_text != suggestion.proposed_text_ru:
-                suggestion.proposed_text_ru = edited_text
-                suggestion.save(update_fields=["proposed_text_ru"])
+            if edited_text and edited_text != suggestion.proposed_text_av:
+                suggestion.proposed_text_av = edited_text
+                suggestion.save(update_fields=["proposed_text_av"])
 
             if action == "accept":
-                suggestion.sentence.text_ru = suggestion.proposed_text_ru
+                suggestion.sentence.text_av = suggestion.proposed_text_av
                 suggestion.sentence.translated_by = suggestion.author
                 suggestion.sentence.status = Sentence.Status.TRANSLATED
-                suggestion.sentence.save(update_fields=["text_ru", "translated_by", "status", "updated_at"])
+                suggestion.sentence.save(update_fields=["text_av", "translated_by", "status", "updated_at"])
                 suggestion.status = TranslationSuggestion.Status.ACCEPTED
                 suggestion.reviewed_by = request.user
                 suggestion.reviewed_at = timezone.now()
@@ -335,7 +335,7 @@ class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
             sentence_form = SentenceEditForm(request.POST, instance=self.sentence)
             if sentence_form.is_valid():
                 sentence = sentence_form.save(commit=False)
-                if not sentence.text_ru:
+                if not sentence.text_av:
                     if self.sentence.suggestions.filter(status=TranslationSuggestion.Status.PENDING).exists():
                         sentence.status = Sentence.Status.PENDING
                     else:
@@ -353,7 +353,7 @@ class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
             )
 
         if action == "delete_translation":
-            self.sentence.text_ru = ""
+            self.sentence.text_av = ""
             self.sentence.translated_by = None
             if self.sentence.suggestions.filter(status=TranslationSuggestion.Status.PENDING).exists():
                 self.sentence.status = Sentence.Status.PENDING
@@ -384,6 +384,6 @@ class CorpusExportView(EditorRequiredMixin, TemplateView):
         
         rows = Sentence.objects.filter(status=Sentence.Status.TRANSLATED).order_by("id")
         for sentence in rows:
-            writer.writerow([sentence.source_text_av, sentence.text_ru])
+            writer.writerow([sentence.source_text_ru, sentence.text_av])
             
         return response

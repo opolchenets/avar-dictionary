@@ -5,14 +5,14 @@ from corpus.models import Sentence
 
 class SentenceImportForm(forms.Form):
     sentences = forms.CharField(
-        label="Список аварских предложений",
+        label="Список русских предложений",
         widget=forms.Textarea(attrs={"rows": 12}),
         help_text="Одна строка = одно предложение. Вставка текста.",
         required=False
     )
     csv_file = forms.FileField(
         label="Или загрузите CSV-файл",
-        help_text="Файл может содержать 1 колонку (только аварский текст) или 2 колонки (аварский текст, русский перевод). Без заголовков.",
+        help_text="Файл может содержать 1 колонку (только русский текст) или 2 колонки (русский текст, аварский перевод). Без заголовков.",
         required=False
     )
 
@@ -28,8 +28,8 @@ class SentenceImportForm(forms.Form):
 class SentenceEditForm(forms.ModelForm):
     class Meta:
         model = Sentence
-        fields = ("source_text_av", "text_ru")
+        fields = ("source_text_ru", "text_av")
         widgets = {
-            "source_text_av": forms.Textarea(attrs={"rows": 4}),
-            "text_ru": forms.Textarea(attrs={"rows": 4})
+            "source_text_ru": forms.Textarea(attrs={"rows": 4}),
+            "text_av": forms.Textarea(attrs={"rows": 4})
         }

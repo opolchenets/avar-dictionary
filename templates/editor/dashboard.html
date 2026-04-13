@@ -55,7 +55,7 @@
         {% for sentence in latest_sentences %}
           <a href="{% url 'editor-sentence-detail' sentence.pk %}" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; background: var(--soft); padding: 0.8rem 1rem; border-radius: 10px; color: var(--ink);">
             <span style="color: var(--muted); font-weight: 600; font-size: 0.85rem; min-width: 40px;">#{{ sentence.id }}</span>
-            <span style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ sentence.source_text_av }}</span>
+            <span style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">{{ sentence.source_text_ru }}</span>
           </a>
         {% empty %}
           <p style="color: var(--muted); text-align: center; padding: 2rem 0; background: var(--soft); border-radius: 10px;">Корпус пока пуст.</p>

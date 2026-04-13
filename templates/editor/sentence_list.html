@@ -18,7 +18,7 @@
   <section class="panel" style="margin-bottom: 2rem; padding: 1rem;">
     <form method="get" style="display: flex; gap: 1rem; align-items: center;">
       <div style="flex: 1;">
-        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по аварскому тексту...">
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по тексту...">
       </div>
       <div style="width: 200px;">
         <select name="status" onchange="this.form.submit()">
@@ -44,10 +44,10 @@
         <summary style="display: flex; align-items: center; gap: 1rem; padding: 0.7rem 1.25rem; cursor: pointer; list-style: none;">
           <span style="font-family: monospace; font-weight: 800; color: var(--muted); font-size: 0.8rem; min-width: 40px;">#{{ sentence.id }}</span>
           <div style="flex: 1; display: flex; align-items: center; gap: 1rem; overflow: hidden;">
-            <span style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.source_text_av }}</span>
-            {% if sentence.text_ru %}
+            <span style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.source_text_ru }}</span>
+            {% if sentence.text_av %}
               <span style="color: var(--accent); font-weight: 900; opacity: 0.5;">&rarr;</span>
-              <span style="color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.text_ru }}</span>
+              <span style="color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.text_av }}</span>
             {% endif %}
           </div>
           <div style="text-align: right; min-width: 120px;">
@@ -64,8 +64,8 @@
             <input type="hidden" name="action" value="save">
             
             <div>
-              <label class="mod-info-label">Аварский текст (оригинал)</label>
-              <textarea name="source_text_av" rows="3" style="font-size: 1.1rem; font-weight: 700; color: var(--ink);">{{ sentence.source_text_av }}</textarea>
+              <label class="mod-info-label">Русский текст (оригинал)</label>
+              <textarea name="source_text_ru" rows="3" style="font-size: 1.1rem; font-weight: 700; color: var(--ink);">{{ sentence.source_text_ru }}</textarea>
             </div>
 
             <div style="font-size: 0.85rem; color: var(--muted); display: grid; gap: 0.5rem;">
@@ -84,18 +84,18 @@
             <input type="hidden" name="action" value="save">
             
             <div>
-              <label class="mod-info-label">Русский перевод (основной)</label>
-              <textarea name="text_ru" rows="3" style="font-size: 1.1rem; font-weight: 600;" placeholder="Введите перевод...">{{ sentence.text_ru }}</textarea>
+              <label class="mod-info-label">Аварский перевод (основной)</label>
+              <textarea name="text_av" rows="3" style="font-size: 1.1rem; font-weight: 600;" placeholder="Введите перевод...">{{ sentence.text_av }}</textarea>
             </div>
             
             <div style="display: flex; gap: 0.75rem;">
               <button class="button" type="submit" name="action" value="save" style="flex: 2;">Сохранить изменения</button>
-              {% if sentence.text_ru %}
+              {% if sentence.text_av %}
                 <button class="button danger" type="submit" name="action" value="delete_translation" style="flex: 1; padding: 0.5rem; font-size: 0.8rem;" onclick="return confirm('Удалить только перевод?')">Удалить перевод</button>
               {% endif %}
             </div>
             <p style="font-size: 0.75rem; color: var(--muted); margin: 0.5rem 0 0;">
-              * Любое изменение аварского текста или русского перевода можно сделать прямо здесь.
+              * Сохранение аварского текста сделает предложение «Переведенным».
             </p>
           </form>
         </div>

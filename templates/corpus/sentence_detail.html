@@ -1,102 +1,67 @@
 {% extends "base.html" %}
 
-{% block title %}Предложение #{{ sentence.id }}{% endblock %}
+{% block title %}Предложение #{{ sentence.id }} — Avar Corpus{% endblock %}
 
 {% block content %}
 <section class="section-head">
   <div>
     <p class="eyebrow">Предложение #{{ sentence.id }}</p>
-    <h1>{{ sentence.source_text_av }}</h1>
+    <h1 style="font-size: 1.8rem; line-height: 1.3;">{{ sentence.source_text_ru }}</h1>
   </div>
-  <a class="button ghost" href="{% url 'sentence-list' %}">Все предложения</a>
 </section>
 
 <section class="detail-grid">
   <article class="panel">
-    <h2>Основной перевод</h2>
-    {% if sentence.text_ru %}
-      <p class="primary-translation">{{ sentence.text_ru }}</p>
+    <h2>Основной перевод (аварский)</h2>
+    {% if sentence.text_av %}
+      <p class="primary-translation" style="font-size: 1.4rem; font-weight: 700; color: var(--accent); line-height: 1.3; margin-bottom: 1rem;">{{ sentence.text_av }}</p>
       {% if sentence.translated_by %}
         <p class="subtle">Автор: {{ sentence.translated_by.profile.display_name|default:sentence.translated_by.username }}</p>
       {% endif %}
     {% else %}
-      <p class="empty-state">Пока никто не добавил перевод.</p>
+      <p class="empty-state">Пока никто не добавил подтвержденный перевод.</p>
     {% endif %}
   </article>
 
   <article class="panel">
-    <h2>{% if sentence.text_ru %}Предложить вариант{% else %}Предложить перевод{% endif %}</h2>
+    <h2>{% if sentence.text_av %}Предложить вариант{% else %}Предложить перевод{% endif %}</h2>
     {% if request.user.is_authenticated %}
       <form method="post" class="stack">
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit" class="button">
-          {% if sentence.text_ru %}Предложить вариант{% else %}Предложить перевод{% endif %}
+          {% if sentence.text_av %}Предложить вариант{% else %}Отправить перевод{% endif %}
         </button>
       </form>
     {% else %}
-      <p class="empty-state">Чтобы переводить и предлагать правки, нужно <a href="{% url 'login' %}?next={{ request.path }}">войти</a>.</p>
+      <p class="empty-state">Чтобы переводить и предлагать правки, нужно <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent); font-weight: 700;">войти</a>.</p>
     {% endif %}
   </article>
 </section>
 
-<section class="panel">
-  <div class="section-head">
-    <h2>Предложенные переводы</h2>
-  </div>
-  {% if pending_suggestions %}
+{% if pending_suggestions %}
+  <section style="margin-top: 3rem;">
+    <h2 style="margin-bottom: 1.5rem;">Другие предложенные варианты ({{ pending_suggestions|length }})</h2>
     <div class="list-stack">
       {% for suggestion in pending_suggestions %}
-        <article class="suggestion-card panel-inner">
-          <div class="sentence-meta">
-            <span class="badge">
-              {{ suggestion.get_status_display }}
-            </span>
-            <span>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</span>
-          </div>
-          <p>{{ suggestion.proposed_text_ru }}</p>
+        <article class="panel">
+          <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">{{ suggestion.proposed_text_av }}</p>
           <div class="suggestion-footer">
-            <span class="vote-count">{{ suggestion.vote_count }} голосов</span>
-            {% if request.user.is_authenticated %}
-              <form method="post" action="{% url 'suggestion-vote-toggle' sentence.pk suggestion.pk %}" class="inline-form">
-                {% csrf_token %}
-                <button type="submit" class="button ghost small-button">
-                  {% if suggestion.user_voted %}Снять голос{% else %}Поддержать{% endif %}
-                </button>
-              </form>
-            {% else %}
-              <a class="subtle" href="{% url 'login' %}?next={{ request.path }}">Войдите, чтобы голосовать</a>
-            {% endif %}
+            <span class="subtle">От: <strong>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</strong></span>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <span class="vote-count">{{ suggestion.vote_count }} голосов</span>
+              {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'suggestion-vote-toggle' sentence.pk suggestion.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="button ghost small-button">
+                    {% if suggestion.user_voted %}Снять голос{% else %}Поддержать{% endif %}
+                  </button>
+                </form>
+              {% endif %}
+            </div>
           </div>
           {% if suggestion.editor_note %}
-            <p class="subtle">Комментарий редактора: {{ suggestion.editor_note }}</p>
-          {% endif %}
-        </article>
-      {% endfor %}
-    </div>
-  {% else %}
-    <p class="empty-state">Пока нет предложенных вариантов.</p>
-  {% endif %}
-</section>
-
-{% if reviewed_suggestions %}
-  <section class="panel">
-    <div class="section-head">
-      <h2>Уже рассмотренные варианты</h2>
-    </div>
-    <div class="list-stack">
-      {% for suggestion in reviewed_suggestions %}
-        <article class="suggestion-card panel-inner">
-          <div class="sentence-meta">
-            <span class="badge {% if suggestion.status == 'accepted' %}done{% elif suggestion.status == 'rejected' %}rejected{% endif %}">
-              {{ suggestion.get_status_display }}
-            </span>
-            <span>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</span>
-          </div>
-          <p>{{ suggestion.proposed_text_ru }}</p>
-          <p class="subtle">Голосов: {{ suggestion.vote_count }}</p>
-          {% if suggestion.editor_note %}
-            <p class="subtle">Комментарий редактора: {{ suggestion.editor_note }}</p>
+            <p class="subtle" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line);">Комментарий редактора: {{ suggestion.editor_note }}</p>
           {% endif %}
         </article>
       {% endfor %}

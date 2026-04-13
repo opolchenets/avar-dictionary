@@ -8,8 +8,8 @@ class Sentence(models.Model):
         PENDING = "pending", "На проверке"
         TRANSLATED = "translated", "Переведено"
 
-    source_text_av = models.TextField("Аварское предложение", unique=True)
-    text_ru = models.TextField("Русский перевод", blank=True, default="")
+    source_text_ru = models.TextField("Русский текст", unique=True)
+    text_av = models.TextField("Аварский перевод", blank=True, default="")
     translated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -32,4 +32,4 @@ class Sentence(models.Model):
         verbose_name_plural = "Предложения"
 
     def __str__(self) -> str:
-        return self.source_text_av[:80]
+        return self.source_text_ru[:80]

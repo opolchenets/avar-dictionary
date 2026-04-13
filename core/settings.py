@@ -49,6 +49,23 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = ["django.middleware.security.SecurityMiddleware"]
 
+# Security Headers & Settings
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = "DENY"
+SECURE_REFERRER_POLICY = "same-origin"
+
+# Fix for ERR_TOO_MANY_REDIRECTS when behind a proxy
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 if USE_WHITENOISE:
     MIDDLEWARE.append("whitenoise.middleware.WhiteNoiseMiddleware")
 

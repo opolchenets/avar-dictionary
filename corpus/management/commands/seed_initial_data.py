@@ -4,21 +4,21 @@ from corpus.models import Sentence
 
 
 SAMPLE_SENTENCES = [
-    "Дие гӏемер гӏарац кьола дица гьабулеб жоялъухъ.",
-    "Томида квекийилан гьаризе бегьулищ?",
-    "Анлӏгоялда вахъиналъул правила ккун чӏун вуго дун.",
-    "Машина бачине цӀакъ кепаб жо буго.",
-    "Дица гьабизе кколеб хӀалтӀи гӀемераб буго.",
-    "Къаникье инчӀого вукӀине, дица кӀвараб хӀалалъ дагь гьабула.",
-    "Дие гьеб бокьун буго щвезе кӏварабго.",
-    "Дун свакана гин дие кьижизе ине бокьун буго.",
-    "Дие дудаса цохӏо къваригӀараб жо буго — нижгун кӏалъазе.",
-    "Дие бокьун буго кӀварабгӀан лъикӀ дирго хӀалтӀи гьабизе.",
+    "Я получаю много денег за то, что я делаю.",
+    "Могу я попросить Тома о помощи?",
+    "Я соблюдаю правила шестидесяти.",
+    "Водить машину — очень веселое занятие.",
+    "Мне нужно сделать много работы.",
+    "Чтобы не попасть в могилу, я стараюсь делать поменьше.",
+    "Я хочу получить это как можно скорее.",
+    "Я устал и хочу пойти спать.",
+    "Мне от тебя нужно только одно — поговори с нами.",
+    "Я хочу выполнять свою работу как можно лучше.",
 ]
 
 
 class Command(BaseCommand):
-    help = "Populate the database with initial Avar sample sentences when corpus is empty."
+    help = "Populate the database with initial Russian sample sentences when corpus is empty."
 
     def handle(self, *args, **options):
         if Sentence.objects.exists():
@@ -28,7 +28,7 @@ class Command(BaseCommand):
             return
 
         Sentence.objects.bulk_create(
-            [Sentence(source_text_av=text) for text in SAMPLE_SENTENCES]
+            [Sentence(source_text_ru=text) for text in SAMPLE_SENTENCES]
         )
         self.stdout.write(
             self.style.SUCCESS(

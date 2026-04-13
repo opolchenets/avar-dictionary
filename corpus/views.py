@@ -47,11 +47,11 @@ def submit_translation(*, user, sentence_id, translated_text):
     with transaction.atomic():
         sentence = Sentence.objects.select_for_update().get(pk=sentence_id)
 
-        if sentence.text_ru and sentence.text_ru.strip() == translated_text:
+        if sentence.text_av and sentence.text_av.strip() == translated_text:
             raise TranslationSubmissionError("Этот перевод уже является основным.")
 
         duplicate = sentence.suggestions.filter(
-            proposed_text_ru__iexact=translated_text
+            proposed_text_av__iexact=translated_text
         ).exists()
         if duplicate:
             raise TranslationSubmissionError(
@@ -60,13 +60,13 @@ def submit_translation(*, user, sentence_id, translated_text):
 
         suggestion = TranslationSuggestion.objects.create(
             sentence=sentence,
-            proposed_text_ru=translated_text,
+            proposed_text_av=translated_text,
             author=user,
         )
         if sentence.status == Sentence.Status.UNTRANSLATED:
             sentence.status = Sentence.Status.PENDING
             sentence.save(update_fields=["status", "updated_at"])
-        return "Перевод отправлен редактору на проверку."
+        return "Перевод на аварский отправлен редактору на проверку."
 
 
 class HomeView(TemplateView):
@@ -152,8 +152,8 @@ class SentenceListView(ListView):
 
             if query:
                 queryset = queryset.filter(
-                    Q(source_text_av__icontains=query)
-                    | Q(text_ru__icontains=query)
+                    Q(source_text_ru__icontains=query)
+                    | Q(text_av__icontains=query)
                 )
             if status != "all":
                 queryset = queryset.filter(status=status)
@@ -195,10 +195,10 @@ class SentenceListView(ListView):
             return redirect(redirect_to)
 
         if not form.is_valid():
-            messages.error(request, "Введите перевод на русский.")
+            messages.error(request, "Введите перевод на аварский.")
             return redirect(redirect_to)
 
-        translated_text = form.cleaned_data["text_ru"].strip()
+        translated_text = form.cleaned_data["text_av"].strip()
         try:
             message = submit_translation(
                 user=request.user,
@@ -239,7 +239,7 @@ class SentenceDetailView(DetailView):
         if not form.is_valid():
             return self.render_to_response(self.get_context_data(form=form))
 
-        translated_text = form.cleaned_data["text_ru"].strip()
+        translated_text = form.cleaned_data["text_av"].strip()
         try:
             message = submit_translation(
                 user=request.user,
@@ -247,7 +247,7 @@ class SentenceDetailView(DetailView):
                 translated_text=translated_text,
             )
         except TranslationSubmissionError as error:
-            form.add_error("text_ru", str(error))
+            form.add_error("text_av", str(error))
             return self.render_to_response(self.get_context_data(form=form))
         else:
             messages.success(request, message)

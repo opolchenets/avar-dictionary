@@ -43,7 +43,13 @@
       <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line);">
         <span style="color: var(--muted); font-weight: 600;">Роль</span>
         <span class="badge {% if request.user.profile.is_editor %}done{% endif %}">
-          {{ request.user.profile.get_role_display }}
+          {% if request.user.is_superuser %}
+            Администратор
+          {% elif request.user.is_staff or request.user.profile.role == 'editor' %}
+            Редактор
+          {% else %}
+            Переводчик
+          {% endif %}
         </span>
       </div>
       <div style="display: flex; justify-content: space-between;">

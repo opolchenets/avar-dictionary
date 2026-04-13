@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.html import strip_tags
 
 
 class SentenceFilterForm(forms.Form):
@@ -19,8 +20,12 @@ class SentenceFilterForm(forms.Form):
 
 
 class TranslationSubmissionForm(forms.Form):
-    text_ru = forms.CharField(
-        label="Перевод на русский",
+    text_av = forms.CharField(
+        label="Перевод на аварский",
         widget=forms.Textarea(attrs={"rows": 4}),
         max_length=5000,
     )
+
+    def clean_text_av(self):
+        data = self.cleaned_data["text_av"]
+        return strip_tags(data)

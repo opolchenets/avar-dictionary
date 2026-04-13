@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load url_utils %}
 
-{% block title %}Предложения корпуса{% endblock %}
+{% block title %}Предложения корпуса — Avar Corpus{% endblock %}
 {% block body_class %}workspace-page{% endblock %}
 
 {% block content %}
@@ -33,7 +33,7 @@
 
   <section style="margin-bottom: 2rem;">
     <form method="get" class="workspace-filter" style="display: flex; gap: 1rem; flex-direction: column;">
-      <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по предложению или переводу..." style="width: 100%;">
+      <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по русскому тексту или аварскому переводу..." style="width: 100%;">
       <div class="workspace-tabs">
         <button type="submit" name="status" value="all" class="{% if request.GET.status|default:'all' == 'all' %}is-active{% endif %}">Все</button>
         <button type="submit" name="status" value="untranslated" class="{% if request.GET.status == 'untranslated' %}is-active{% endif %}">Непереведённые</button>
@@ -48,17 +48,17 @@
       <details id="sentence-{{ sentence.id }}" class="workspace-card">
         <summary class="workspace-summary">
           <span class="workspace-number">#{{ sentence.id }}</span>
-          <span class="workspace-text">{{ sentence.source_text_av }}</span>
+          <span class="workspace-text">{{ sentence.source_text_ru }}</span>
           <span class="workspace-status {% if sentence.status == 'translated' %}is-done{% elif sentence.status == 'pending' %}is-pending{% endif %}">
             {% if sentence.status == 'translated' %}переведено{% elif sentence.status == 'pending' %}на проверке{% else %}свободно{% endif %}
           </span>
         </summary>
 
         <div class="workspace-body">
-          {% if sentence.text_ru %}
+          {% if sentence.text_av %}
             <div class="workspace-current">
-              <span>Текущий перевод</span>
-              <p>{{ sentence.text_ru }}</p>
+              <span>Текущий перевод (аварский)</span>
+              <p>{{ sentence.text_av }}</p>
             </div>
           {% endif %}
 
@@ -68,13 +68,13 @@
               <input type="hidden" name="sentence_id" value="{{ sentence.id }}">
               <input type="hidden" name="next" value="{{ request.get_full_path }}#sentence-{{ sentence.id }}">
               <div>
-                <label for="translation-{{ sentence.id }}">Ваш вариант перевода на русский</label>
-                <textarea id="translation-{{ sentence.id }}" name="text_ru" rows="2" placeholder="Введите перевод..." required></textarea>
+                <label for="translation-{{ sentence.id }}">Ваш перевод на аварский язык</label>
+                <textarea id="translation-{{ sentence.id }}" name="text_av" rows="2" placeholder="Введите перевод на аварский..." required></textarea>
               </div>
               <div class="workspace-actions">
                 <button type="button" class="button ghost close-card-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" data-target="sentence-{{ sentence.id }}">Отмена</button>
                 <button type="submit" class="button" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
-                  {% if sentence.text_ru %}Предложить вариант{% else %}Отправить перевод{% endif %}
+                  {% if sentence.text_av %}Предложить вариант{% else %}Отправить перевод{% endif %}
                 </button>
               </div>
             </form>
@@ -88,7 +88,7 @@
               <div class="workspace-options">
                 {% for suggestion in sentence.pending_suggestions %}
                   <article class="workspace-option">
-                    <p style="margin-bottom: 0.5rem;">{{ suggestion.proposed_text_ru }}</p>
+                    <p style="margin-bottom: 0.5rem;">{{ suggestion.proposed_text_av }}</p>
                     <div class="workspace-option-meta">
                       <strong>{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</strong>
                       <span>{{ suggestion.vote_count }} голосов</span>
@@ -119,11 +119,11 @@
   {% if is_paginated %}
     <nav class="pagination" style="margin-top: 3rem; display: flex; justify-content: center; gap: 1rem; align-items: center;">
       {% if page_obj.has_previous %}
-        <a href="?{% url_replace page=page_obj.previous_page_number %}" class="button ghost">&larr; Назад</a>
+        <a href="?{% url_replace page=page_obj.previous_page_number %}" class="button ghost">Назад</a>
       {% endif %}
       <span style="font-weight: 700; color: var(--muted);">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
       {% if page_obj.has_next %}
-        <a href="?{% url_replace page=page_obj.next_page_number %}" class="button ghost">Вперёд &rarr;</a>
+        <a href="?{% url_replace page=page_obj.next_page_number %}" class="button ghost">Вперёд</a>
       {% endif %}
     </nav>
   {% endif %}
@@ -131,74 +131,25 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-  (() => {
-    // Open targeted details
-    const hash = window.location.hash;
-    if (hash) {
-      const target = document.querySelector(hash);
-      if (target && target.tagName === "DETAILS") {
-        target.open = true;
-        target.scrollIntoView({ block: "center" });
-        setTimeout(() => {
-          const textarea = target.querySelector('textarea');
-          if (textarea) textarea.focus();
-        }, 100);
-      }
-    }
-
-    // Close buttons
-    document.querySelectorAll(".close-card-button").forEach((button) => {
-      button.addEventListener("click", () => {
-        const target = document.getElementById(button.dataset.target);
-        if (target) target.open = false;
-      });
-    });
-
-    // Accordion behavior
-    const cards = Array.from(document.querySelectorAll(".workspace-card"));
-    cards.forEach((details) => {
-      details.addEventListener("toggle", () => {
-        if (!details.open) return;
-        cards.forEach((openDetails) => {
-          if (openDetails !== details) openDetails.open = false;
-        });
-        if (details.id) history.replaceState(null, "", `#${details.id}`);
-      });
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener("keydown", (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
-      
-      const openCardIndex = cards.findIndex(c => c.open);
-      let targetCard = null;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        targetCard = openCardIndex === -1 ? cards[0] : cards[openCardIndex + 1];
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        targetCard = openCardIndex === -1 ? cards[cards.length - 1] : cards[openCardIndex - 1];
-      } else if (e.key === "Enter" && openCardIndex !== -1) {
-        e.preventDefault();
-        const textarea = cards[openCardIndex].querySelector('textarea');
-        if (textarea) textarea.focus();
-      }
-
-      if (targetCard) {
-        targetCard.open = true;
-        targetCard.scrollIntoView({ block: "center", behavior: "smooth" });
-      }
-    });
-
+...
     // Highlight search query
     const urlParams = new URLSearchParams(window.location.search);
     const query = urlParams.get('q');
     if (query) {
-      const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')})`, 'gi');
+      const escapedQuery = query.replace(/[.*+?^${}()|[\\\\]\\\\]/g, '\\$&');
+      const regex = new RegExp(`(${escapedQuery})`, 'gi');
+      
       document.querySelectorAll('.workspace-text, .workspace-current p').forEach(el => {
-        el.innerHTML = el.textContent.replace(regex, '<mark style="background:rgba(46, 102, 74, 0.2); color: inherit; padding: 0 2px; border-radius: 3px;">$1</mark>');
+        const originalText = el.textContent;
+        if (regex.test(originalText)) {
+          // Escape the original text first to prevent XSS
+          const div = document.createElement('div');
+          div.textContent = originalText;
+          const escapedText = div.innerHTML;
+          
+          // Apply highlight only to the escaped text
+          el.innerHTML = escapedText.replace(regex, '<mark style="background:rgba(46, 102, 74, 0.2); color: inherit; padding: 0 2px; border-radius: 3px;">$1</mark>');
+        }
       });
     }
   })();
