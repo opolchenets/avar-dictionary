@@ -1,60 +1,130 @@
 {% extends "base.html" %}
 
-{% block title %}Лидерборд{% endblock %}
+{% block title %}Рейтинги — Avar Corpus{% endblock %}
 
 {% block content %}
 <div style="max-width: 960px; margin: 0 auto;">
-  <section class="section-head">
+  <section class="section-head" style="margin-bottom: 2rem;">
     <div>
-      <p class="eyebrow">Рейтинг участников</p>
-      <h1>Лидерборд переводчиков</h1>
+      <p class="eyebrow">Соревнование</p>
+      <h1>Рейтинги</h1>
     </div>
   </section>
 
-  <div class="podium-grid">
-    {% if leaders %}
-      {% for leader in leaders|slice:":3" %}
-        <article class="card podium-card podium-{{ forloop.counter }}">
-          <div class="podium-top">
-            {% if forloop.counter == 1 %}🏆{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}
-          </div>
-          <p class="eyebrow">{{ forloop.counter }} место</p>
-          <h2>{{ leader.display_name }}</h2>
-          <p class="podium-points">{{ leader.total_points }} очков</p>
-          <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem; font-size: 0.85rem; color: var(--muted); font-weight: 600;">
-            <span>{{ leader.accepted_count }} принятых</span>
-          </div>
-        </article>
-      {% endfor %}
-    {% endif %}
+  <div class="workspace-tabs" style="margin-bottom: 2rem;">
+    <button type="button" class="tab-btn is-active" data-target="overall-board">Общий</button>
+    <button type="button" class="tab-btn" data-target="district-board">По районам</button>
+    <button type="button" class="tab-btn" data-target="alliance-board">По альянсам</button>
   </div>
 
-  <section class="panel" style="padding: 0; overflow: hidden;">
-    {% if leaders %}
+  <!-- 1. Overall User Leaderboard -->
+  <section id="overall-board" class="tab-content">
+    <div class="panel" style="padding: 0; overflow: hidden;">
       <div style="padding: 1.5rem 1.5rem 0.5rem; border-bottom: 1px solid var(--line); background: var(--soft);">
-        <div class="leader-row" style="font-weight: 700; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; border-bottom: none;">
+        <div class="leaderboard-head">
           <span>Ранг</span>
-          <span>Переводчик</span>
-          <span style="text-align: right;">Очки</span>
+          <span>Участник</span>
+          <span style="text-align: right;">Переводы</span>
         </div>
       </div>
-      {% for leader in leaders %}
-        <div class="leader-row">
-          <span class="rank-circle">{{ forloop.counter }}</span>
-          <div style="display: flex; flex-direction: column;">
-            <strong style="font-size: 1.05rem;">{{ leader.display_name }}</strong>
-            <span style="font-size: 0.85rem; color: var(--muted); font-weight: 500;">
-              {{ leader.translation_count }} основных · {{ leader.suggestion_count }} предложений
-            </span>
+      {% for leader in user_leaders %}
+        <div class="leaderboard-row">
+          <span style="font-weight: 800; font-size: 1.1rem; color: var(--muted); min-width: 40px;">
+            {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}#{{ forloop.counter }}{% endif %}
+          </span>
+          <div class="leaderboard-meta">
+            <strong style="font-size: 1.1rem;">{{ leader.profile.display_name|default:leader.username }}</strong>
+            {% if leader.profile.district %}
+              <span style="font-size: 0.85rem; color: var(--muted);">
+                {{ leader.profile.district.name }} / <span style="color: {{ leader.profile.district.alliance.color }}">{{ leader.profile.district.alliance.name }}</span>
+              </span>
+            {% endif %}
           </div>
-          <span style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--accent);">{{ leader.total_points }}</span>
+          <span class="leaderboard-points">{{ leader.accepted_count }}</span>
+        </div>
+      {% empty %}
+        <div style="padding: 4rem 2rem; text-align: center;">
+          <p class="empty-state">Рейтинг появится после первых принятых переводов.</p>
         </div>
       {% endfor %}
-    {% else %}
-      <div style="padding: 4rem 2rem; text-align: center;">
-        <p class="empty-state">Лидерборд появится после первых начислений очков.</p>
+    </div>
+  </section>
+
+  <!-- 2. District Leaderboard -->
+  <section id="district-board" class="tab-content" style="display: none;">
+    <div class="panel" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1.5rem 1.5rem 0.5rem; border-bottom: 1px solid var(--line); background: var(--soft);">
+        <div class="leaderboard-head">
+          <span>Ранг</span>
+          <span>Район</span>
+          <span style="text-align: right;">Переводы</span>
+        </div>
       </div>
-    {% endif %}
+      {% for district in district_leaders %}
+        <div class="leaderboard-row">
+          <span style="font-weight: 800; font-size: 1.1rem; color: var(--muted);">#{{ forloop.counter }}</span>
+          <div class="leaderboard-meta">
+            <strong style="font-size: 1.1rem;">{{ district.name }}</strong>
+            <span style="font-size: 0.85rem; color: {{ district.alliance.color }}; font-weight: 600;">
+              {{ district.alliance.name }}
+            </span>
+          </div>
+          <span class="leaderboard-points">{{ district.accepted_count }}</span>
+        </div>
+      {% empty %}
+        <div style="padding: 4rem 2rem; text-align: center;">
+          <p class="empty-state">Районы появятся в рейтинге после того, как их жители сделают переводы.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- 3. Alliance Leaderboard -->
+  <section id="alliance-board" class="tab-content" style="display: none;">
+    <div class="panel" style="padding: 0; overflow: hidden;">
+      <div style="padding: 1.5rem 1.5rem 0.5rem; border-bottom: 1px solid var(--line); background: var(--soft);">
+        <div class="leaderboard-head">
+          <span>Ранг</span>
+          <span>Альянс</span>
+          <span style="text-align: right;">Переводы</span>
+        </div>
+      </div>
+      {% for alliance in alliance_leaders %}
+        <div class="leaderboard-row">
+          <span style="font-weight: 800; font-size: 1.1rem; color: var(--muted);">#{{ forloop.counter }}</span>
+          <div class="action-row">
+            {% if alliance.icon %}
+              <img src="{{ alliance.icon.url }}" style="height: 40px; width: 40px; border-radius: 8px; object-fit: cover;">
+            {% endif %}
+            <strong style="font-size: 1.2rem; color: {{ alliance.color }};">{{ alliance.name }}</strong>
+          </div>
+          <span class="leaderboard-points">{{ alliance.accepted_count }}</span>
+        </div>
+      {% empty %}
+        <div style="padding: 4rem 2rem; text-align: center;">
+          <p class="empty-state">Альянсы появятся в рейтинге после того, как их участники сделают переводы.</p>
+        </div>
+      {% endfor %}
+    </div>
   </section>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('is-active'));
+        contents.forEach(c => c.style.display = 'none');
+
+        tab.classList.add('is-active');
+        document.getElementById(tab.dataset.target).style.display = 'block';
+      });
+    });
+  })();
+</script>
 {% endblock %}

@@ -3,29 +3,37 @@
 {% block title %}База предложений — Редактор{% endblock %}
 
 {% block content %}
-<div style="max-width: 1000px; margin: 0 auto;">
+<div class="page-narrow">
   <section class="section-head">
     <div>
       <p class="eyebrow">Корпус</p>
       <h1>База предложений</h1>
     </div>
-    <div style="display: flex; gap: 1rem;">
+    <div class="editor-toolbar">
       <a href="{% url 'editor-import' %}" class="button">+ Импорт</a>
       <a href="{% url 'editor-export' %}" class="button ghost">Экспорт CSV</a>
     </div>
   </section>
 
   <section class="panel" style="margin-bottom: 2rem; padding: 1rem;">
-    <form method="get" style="display: flex; gap: 1rem; align-items: center;">
-      <div style="flex: 1;">
+    <form method="get" class="editor-filter-form">
+      <div class="editor-filter-search">
         <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по тексту...">
       </div>
-      <div style="width: 200px;">
+      <div class="editor-filter-select">
         <select name="status" onchange="this.form.submit()">
           <option value="all" {% if request.GET.status == 'all' %}selected{% endif %}>Все статусы</option>
           <option value="untranslated" {% if request.GET.status == 'untranslated' %}selected{% endif %}>Не переведено</option>
           <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>На проверке</option>
           <option value="translated" {% if request.GET.status == 'translated' %}selected{% endif %}>Переведено</option>
+        </select>
+      </div>
+      <div class="editor-filter-select">
+        <select name="category" onchange="this.form.submit()">
+          <option value="">Все разделы</option>
+          {% for cat in filter_form.fields.category.queryset %}
+            <option value="{{ cat.slug }}" {% if request.GET.category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+          {% endfor %}
         </select>
       </div>
       <button type="submit" class="button">Найти</button>
@@ -38,26 +46,26 @@
     <span style="text-align: right;">Статус</span>
   </div>
 
-  <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+  <div class="editor-card-list">
     {% for sentence in sentences %}
       <details class="mod-compact-card" style="border-radius: 10px; border: 1px solid var(--line); background: var(--paper);">
-        <summary style="display: flex; align-items: center; gap: 1rem; padding: 0.7rem 1.25rem; cursor: pointer; list-style: none;">
-          <span style="font-family: monospace; font-weight: 800; color: var(--muted); font-size: 0.8rem; min-width: 40px;">#{{ sentence.id }}</span>
-          <div style="flex: 1; display: flex; align-items: center; gap: 1rem; overflow: hidden;">
-            <span style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.source_text_ru }}</span>
+        <summary class="editor-card-summary">
+          <span class="editor-card-id">#{{ sentence.id }}</span>
+          <div class="editor-card-copy">
+            <span class="editor-card-text">{{ sentence.source_text_ru }}</span>
             {% if sentence.text_av %}
               <span style="color: var(--accent); font-weight: 900; opacity: 0.5;">&rarr;</span>
-              <span style="color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem;">{{ sentence.text_av }}</span>
+              <span class="editor-card-translation">{{ sentence.text_av }}</span>
             {% endif %}
           </div>
-          <div style="text-align: right; min-width: 120px;">
+          <div class="editor-card-status">
             <span class="badge {% if sentence.status == 'translated' %}done{% elif sentence.status == 'pending' %}pending{% endif %}" style="font-size: 0.6rem;">
               {{ sentence.get_status_display }}
             </span>
           </div>
         </summary>
 
-        <div style="padding: 1.5rem; border-top: 1px solid var(--line); background: #fdfdfc; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+        <div class="editor-card-body">
           <form method="post" class="stack">
             {% csrf_token %}
             <input type="hidden" name="sentence_id" value="{{ sentence.id }}">
@@ -68,7 +76,7 @@
               <textarea name="source_text_ru" rows="3" style="font-size: 1.1rem; font-weight: 700; color: var(--ink);">{{ sentence.source_text_ru }}</textarea>
             </div>
 
-            <div style="font-size: 0.85rem; color: var(--muted); display: grid; gap: 0.5rem;">
+            <div class="editor-meta">
               <span>Создано: <strong>{{ sentence.created_at|date:"d.m.Y H:i" }}</strong></span>
               {% if sentence.translated_by %}
                 <span>Переводчик: <strong>{{ sentence.translated_by.username }}</strong></span>
@@ -88,7 +96,7 @@
               <textarea name="text_av" rows="3" style="font-size: 1.1rem; font-weight: 600;" placeholder="Введите перевод...">{{ sentence.text_av }}</textarea>
             </div>
             
-            <div style="display: flex; gap: 0.75rem;">
+            <div class="editor-card-actions">
               <button class="button" type="submit" name="action" value="save" style="flex: 2;">Сохранить изменения</button>
               {% if sentence.text_av %}
                 <button class="button danger" type="submit" name="action" value="delete_translation" style="flex: 1; padding: 0.5rem; font-size: 0.8rem;" onclick="return confirm('Удалить только перевод?')">Удалить перевод</button>
@@ -108,13 +116,13 @@
   </div>
 
   {% if is_paginated %}
-    <nav class="pagination" style="margin-top: 3rem; display: flex; justify-content: center; gap: 1rem; align-items: center;">
+    <nav class="pagination">
       {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="button ghost">Назад</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="button ghost">Назад</a>
       {% endif %}
       <span style="font-weight: 800; color: var(--muted);">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" class="button ghost">Вперёд</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="button ghost">Вперёд</a>
       {% endif %}
     </nav>
   {% endif %}

@@ -4,6 +4,41 @@ from django.db import models
 from corpus.models import Sentence
 
 
+class Achievement(models.Model):
+    name = models.CharField("Название", max_length=100)
+    threshold = models.IntegerField("Порог (кол-во переводов)")
+    icon = models.CharField("Иконка/Эмодзи", max_length=10, blank=True)
+
+    class Meta:
+        verbose_name = "Достижение"
+        verbose_name_plural = "Достижения"
+        ordering = ("threshold",)
+
+    def __str__(self) -> str:
+        return f"{self.icon} {self.name} ({self.threshold})"
+
+
+class UserAchievement(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="achievements",
+    )
+    achievement = models.ForeignKey(
+        Achievement,
+        on_delete=models.CASCADE,
+    )
+    earned_at = models.DateTimeField("Дата получения", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Достижение пользователя"
+        verbose_name_plural = "Достижения пользователей"
+        unique_together = ("user", "achievement")
+
+    def __str__(self) -> str:
+        return f"{self.user} - {self.achievement}"
+
+
 class PointLedger(models.Model):
     class Reason(models.TextChoices):
         FIRST_TRANSLATION = "first_translation", "Первый перевод"

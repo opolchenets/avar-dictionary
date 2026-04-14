@@ -1,5 +1,6 @@
 from django import forms
 from django.utils.html import strip_tags
+from .models import Category
 
 
 class SentenceFilterForm(forms.Form):
@@ -16,6 +17,13 @@ class SentenceFilterForm(forms.Form):
         choices=STATUS_CHOICES,
         required=False,
         initial="all",
+    )
+    category = forms.ModelChoiceField(
+        label="Раздел",
+        queryset=Category.objects.all(),
+        required=False,
+        empty_label="Все разделы",
+        to_field_name="slug",
     )
 
 

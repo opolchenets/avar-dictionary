@@ -12,13 +12,13 @@
 
 <section class="detail-grid">
   <article class="panel" style="grid-column: 1 / -1;">
-    <h2>Редактировать предложение и перевод</h2>
+    <h2 class="panel-title">Редактировать предложение и перевод</h2>
     <form method="post" class="stack">
       {% csrf_token %}
       {{ sentence_form.as_p }}
-      <div style="display: flex; gap: 1rem;">
+      <div class="editor-card-actions">
         <button type="submit" class="button" name="action" value="save_sentence">Сохранить изменения</button>
-        {% if sentence.text_ru %}
+        {% if sentence.text_av %}
           <button type="submit" class="button danger" name="action" value="delete_translation" onclick="return confirm('Удалить только перевод?')">Удалить только перевод</button>
         {% endif %}
       </div>

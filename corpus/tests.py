@@ -1,13 +1,12 @@
-from django.core.management import call_command
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from corpus.models import Sentence
-from gamification.models import PointLedger
-from suggestions.models import SuggestionVote, TranslationSuggestion
+from suggestions.models import TranslationSuggestion
 
 User = get_user_model()
+
 
 class CorpusFlowTests(TestCase):
     def setUp(self):
@@ -69,3 +68,33 @@ class CorpusFlowTests(TestCase):
         response = self.client.get(reverse("sentence-list"))
         self.assertContains(response, "Другие предложенные варианты")
         self.assertContains(response, "Вариант")
+
+    def test_sentence_list_post_ignores_external_redirect_target(self):
+        self.client.login(username="user", password="Strong-pass123")
+        response = self.client.post(
+            reverse("sentence-list"),
+            {
+                "sentence_id": self.sentence.pk,
+                "text_av": "ТIехь",
+                "next": "https://evil.example/phishing",
+            },
+        )
+
+        self.assertRedirects(response, reverse("sentence-list"))
+
+    def test_duplicate_suggestion_is_rejected(self):
+        TranslationSuggestion.objects.create(
+            sentence=self.sentence,
+            proposed_text_av="ТIехь",
+            author=self.user,
+        )
+        self.client.login(username="user", password="Strong-pass123")
+
+        response = self.client.post(
+            reverse("sentence-detail", args=[self.sentence.pk]),
+            {"text_av": "ТIехь"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        form = response.context["form"]
+        self.assertIn("Такой вариант уже предложен", form.errors["text_av"][0])

@@ -1,5 +1,3 @@
-import csv
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -9,6 +7,7 @@ from gamification.models import PointLedger
 from suggestions.models import SuggestionVote, TranslationSuggestion
 
 User = get_user_model()
+
 
 class EditorFlowTests(TestCase):
     def setUp(self):
@@ -51,13 +50,58 @@ class EditorFlowTests(TestCase):
             1,
         )
 
-    def test_import_csv_russian_avar(self):
+    def test_reject_last_pending_suggestion_returns_sentence_to_untranslated(self):
         self.client.login(username="editor", password="Strong-pass123")
-        # Mock CSV upload or just test the logic via POST sentences text
+        sentence = Sentence.objects.create(
+            source_text_ru="Стол",
+            status=Sentence.Status.PENDING,
+        )
+        suggestion = TranslationSuggestion.objects.create(
+            sentence=sentence,
+            proposed_text_av="Өстел",
+            author=self.user,
+        )
+
         self.client.post(
-            reverse("editor-import"),
+            reverse("editor-suggestions"),
             {
-                "sentences": "Привет\nПока",
+                "id": suggestion.id,
+                "action": "reject",
             },
         )
-        self.assertEqual(Sentence.objects.count(), 3) # +2 new ones
+
+        sentence.refresh_from_db()
+        suggestion.refresh_from_db()
+        self.assertEqual(suggestion.status, TranslationSuggestion.Status.REJECTED)
+        self.assertEqual(sentence.status, Sentence.Status.UNTRANSLATED)
+        self.assertEqual(sentence.text_av, "")
+
+    def test_delete_translation_keeps_sentence_pending_when_suggestions_exist(self):
+        self.client.login(username="editor", password="Strong-pass123")
+        response = self.client.post(
+            reverse("editor-sentences"),
+            {
+                "sentence_id": self.sentence.id,
+                "action": "delete_translation",
+            },
+        )
+
+        self.assertRedirects(response, reverse("editor-sentences"))
+        self.sentence.refresh_from_db()
+        self.assertEqual(self.sentence.text_av, "")
+        self.assertEqual(self.sentence.status, Sentence.Status.PENDING)
+
+    def test_import_sentences_skips_duplicates(self):
+        self.client.login(username="editor", password="Strong-pass123")
+        response = self.client.post(
+            reverse("editor-import"),
+            {
+                "sentences": "Книга\nПривет\nПривет\nПока",
+            },
+        )
+
+        self.assertRedirects(response, reverse("editor-import"))
+        self.assertEqual(
+            Sentence.objects.filter(source_text_ru__in=["Привет", "Пока"]).count(),
+            2,
+        )

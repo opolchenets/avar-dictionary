@@ -2,6 +2,37 @@ from django.conf import settings
 from django.db import models
 
 
+class Alliance(models.Model):
+    name = models.CharField("Название", max_length=100, unique=True)
+    color = models.CharField("Цвет", max_length=50, blank=True)
+    icon = models.ImageField("Иконка", upload_to="alliances/", blank=True, null=True)
+
+    class Meta:
+        verbose_name = "Альянс"
+        verbose_name_plural = "Альянсы"
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class District(models.Model):
+    name = models.CharField("Название", max_length=150, unique=True)
+    alliance = models.ForeignKey(
+        Alliance,
+        on_delete=models.CASCADE,
+        related_name="districts",
+        verbose_name="Альянс",
+    )
+
+    class Meta:
+        verbose_name = "Район"
+        verbose_name_plural = "Районы"
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class UserProfile(models.Model):
     class Role(models.TextChoices):
         CONTRIBUTOR = "contributor", "Переводчик"
@@ -18,6 +49,14 @@ class UserProfile(models.Model):
         max_length=20,
         choices=Role.choices,
         default=Role.CONTRIBUTOR,
+    )
+    district = models.ForeignKey(
+        District,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="profiles",
+        verbose_name="Район",
     )
 
     class Meta:

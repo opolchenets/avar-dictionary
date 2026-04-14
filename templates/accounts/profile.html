@@ -3,7 +3,7 @@
 {% block title %}Профиль — {{ request.user.username }}{% endblock %}
 
 {% block content %}
-<div style="max-width: 800px; margin: 0 auto;">
+<div class="profile-shell">
   <section class="section-head">
     <div>
       <p class="eyebrow">Личный кабинет</p>
@@ -33,16 +33,46 @@
     </div>
   </div>
 
+  <section class="panel" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Достижения</h2>
+    <div class="achievement-grid">
+      {% for ua in achievements %}
+        <div class="achievement-card" title="{{ ua.achievement.name }} (от {{ ua.achievement.threshold }} переводов)">
+          <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">{{ ua.achievement.icon }}</span>
+          <p style="margin: 0; font-weight: 800; font-size: 0.8rem; color: var(--accent);">{{ ua.achievement.name }}</p>
+          <p style="margin: 0.25rem 0 0; font-size: 0.65rem; color: var(--muted);">{{ ua.earned_at|date:"d.m.Y" }}</p>
+        </div>
+      {% empty %}
+        <p class="empty-state">Пока достижений нет. Переводите предложения, чтобы их получить!</p>
+      {% endfor %}
+    </div>
+  </section>
+
   <section class="panel">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Информация об аккаунте</h2>
-    <div style="display: grid; gap: 1rem;">
-      <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line);">
-        <span style="color: var(--muted); font-weight: 600;">Логин</span>
-        <span style="font-weight: 700;">{{ request.user.username }}</span>
+    <div class="info-rows">
+      {% if request.user.profile.district %}
+      <div class="info-row">
+        <span style="color: var(--muted); font-weight: 600;">Альянс</span>
+        <span class="info-value info-value--with-icon">
+          {% if request.user.profile.district.alliance.icon %}
+            <img src="{{ request.user.profile.district.alliance.icon.url }}" style="height: 24px;">
+          {% endif %}
+          <span style="color: {{ request.user.profile.district.alliance.color }}">{{ request.user.profile.district.alliance.name }}</span>
+        </span>
       </div>
-      <div style="display: flex; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--line);">
+      <div class="info-row">
+        <span style="color: var(--muted); font-weight: 600;">Район</span>
+        <span class="info-value">{{ request.user.profile.district.name }}</span>
+      </div>
+      {% endif %}
+      <div class="info-row">
+        <span style="color: var(--muted); font-weight: 600;">Логин</span>
+        <span class="info-value">{{ request.user.username }}</span>
+      </div>
+      <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Роль</span>
-        <span class="badge {% if request.user.profile.is_editor %}done{% endif %}">
+        <span class="badge {% if request.user.profile.is_editor %}done{% endif %} info-value">
           {% if request.user.is_superuser %}
             Администратор
           {% elif request.user.is_staff or request.user.profile.role == 'editor' %}
@@ -52,9 +82,9 @@
           {% endif %}
         </span>
       </div>
-      <div style="display: flex; justify-content: space-between;">
+      <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Дата регистрации</span>
-        <span style="font-weight: 700;">{{ request.user.date_joined|date:"d.m.Y" }}</span>
+        <span class="info-value">{{ request.user.date_joined|date:"d.m.Y" }}</span>
       </div>
     </div>
   </section>

@@ -41,8 +41,8 @@
     </div>
   </main>
 
-  <footer style="background: var(--paper); border-top: 1px solid var(--line); padding: 4rem 0; margin-top: 4rem;">
-    <div class="container" style="display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 4rem;">
+  <footer class="site-footer">
+    <div class="container site-footer-main">
       <div>
         <a class="brand" href="{% url 'home' %}" style="font-size: 1.6rem; display: block; margin-bottom: 1.5rem;">Авар МацI</a>
         <p style="color: var(--muted); line-height: 1.6; font-size: 0.95rem; max-width: 320px;">
@@ -51,7 +51,7 @@
       </div>
       <div>
         <h4 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 1.5rem; color: var(--accent);">Навигация</h4>
-        <nav style="display: grid; gap: 0.75rem;">
+        <nav class="site-footer-nav">
           <a href="{% url 'rules' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Правила</a>
           <a href="{% url 'sentence-list' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Предложения</a>
           <a href="{% url 'leaderboard' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Лидерборд</a>
@@ -59,14 +59,14 @@
       </div>
       <div>
         <h4 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 1.5rem; color: var(--accent);">Сообщество</h4>
-        <div style="display: flex; gap: 1.5rem; font-size: 1.5rem;">
-          <a href="https://t.me/Avaralogia" target="_blank" style="color: #24A1DE; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+        <div class="site-footer-socials">
+          <a href="https://t.me/Avaralogia" target="_blank" rel="noopener noreferrer" style="color: #24A1DE; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
             <i class="fa-brands fa-telegram"></i>
           </a>
-          <a href="https://www.instagram.com/ob.avarskom" target="_blank" style="color: #E4405F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+          <a href="https://www.instagram.com/ob.avarskom" target="_blank" rel="noopener noreferrer" style="color: #E4405F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
             <i class="fa-brands fa-instagram"></i>
           </a>
-          <a href="https://youtube.com/@AccountSaida?si=hSRxiOh8s0bL7CGX" target="_blank" style="color: #CD201F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
+          <a href="https://youtube.com/@AccountSaida?si=hSRxiOh8s0bL7CGX" target="_blank" rel="noopener noreferrer" style="color: #CD201F; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform='translateY(0)'">
             <i class="fa-brands fa-youtube"></i>
           </a>
         </div>
@@ -75,7 +75,7 @@
         </p>
       </div>
     </div>
-    <div class="container" style="margin-top: 4rem; padding-top: 2rem; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 0.85rem;">
+    <div class="container site-footer-bottom">
       &copy; 2026 Авар МацI. Проект по сохранению и развитию языка.
     </div>
   </footer>

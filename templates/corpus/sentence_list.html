@@ -5,7 +5,7 @@
 {% block body_class %}workspace-page{% endblock %}
 
 {% block content %}
-<div style="max-width: 1000px; margin: 0 auto;">
+<div class="page-narrow">
   <section class="section-head" style="margin-bottom: 1.5rem;">
     <div>
       <p class="eyebrow">Рабочее пространство</p>
@@ -16,7 +16,7 @@
     {% endif %}
   </section>
 
-  <section class="stats-grid" style="margin-bottom: 2rem; grid-template-columns: repeat(3, 1fr);">
+  <section class="stats-grid workspace-stats" style="margin-bottom: 2rem;">
     <div class="stat-card" style="padding: 1rem;">
       <span style="font-size: 1.8rem;">{{ total_count }}</span>
       <p style="font-size: 0.75rem;">Всего фраз</p>
@@ -32,8 +32,21 @@
   </section>
 
   <section style="margin-bottom: 2rem;">
-    <form method="get" class="workspace-filter" style="display: flex; gap: 1rem; flex-direction: column;">
-      <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по русскому тексту или аварскому переводу..." style="width: 100%;">
+    <div class="category-tabs">
+      <a href="?{% url_replace category='' %}" class="category-tab {% if not request.GET.category %}is-active{% endif %}">Всё</a>
+      {% for cat in categories %}
+        <a href="?{% url_replace category=cat.slug %}" class="category-tab {% if request.GET.category == cat.slug %}is-active{% endif %}">{{ cat.name }}</a>
+      {% endfor %}
+    </div>
+
+    <form method="get" class="workspace-filter">
+      <div class="workspace-search-row">
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Поиск по русскому тексту или аварскому переводу..." style="flex-grow: 1;">
+        {% if request.GET.category %}
+          <button type="button" class="button accent" id="open-terminology" style="padding: 0.5rem 1rem;">📖 Термины</button>
+        {% endif %}
+      </div>
+      <input type="hidden" name="category" value="{{ request.GET.category|default:'' }}">
       <div class="workspace-tabs">
         <button type="submit" name="status" value="all" class="{% if request.GET.status|default:'all' == 'all' %}is-active{% endif %}">Все</button>
         <button type="submit" name="status" value="untranslated" class="{% if request.GET.status == 'untranslated' %}is-active{% endif %}">Непереведённые</button>
@@ -42,6 +55,37 @@
       </div>
     </form>
   </section>
+
+  <!-- Terminology Sidebar -->
+  <aside id="terminology-sidebar" class="terminology-sidebar">
+    <div class="sidebar-header">
+      <h2>Словарь: {{ current_category.name }}</h2>
+      <button id="close-terminology" class="close-button">&times;</button>
+    </div>
+    <div class="sidebar-content">
+      {% if terms %}
+        <table class="terminology-table">
+          <thead>
+            <tr>
+              <th>RU</th>
+              <th>AV</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for term in terms %}
+              <tr>
+                <td>{{ term.word_ru }}</td>
+                <td>{{ term.word_av }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="empty-state">Для этого раздела пока нет терминов.</p>
+      {% endif %}
+    </div>
+  </aside>
+  <div id="sidebar-overlay" class="sidebar-overlay"></div>
 
   <section class="workspace-list">
     {% for sentence in sentences %}
@@ -117,7 +161,7 @@
   </section>
 
   {% if is_paginated %}
-    <nav class="pagination" style="margin-top: 3rem; display: flex; justify-content: center; gap: 1rem; align-items: center;">
+    <nav class="pagination">
       {% if page_obj.has_previous %}
         <a href="?{% url_replace page=page_obj.previous_page_number %}" class="button ghost">Назад</a>
       {% endif %}
@@ -131,7 +175,38 @@
 {% endblock %}
 
 {% block extra_js %}
-...
+<script>
+  (function() {
+    const openBtn = document.getElementById('open-terminology');
+    const closeBtn = document.getElementById('close-terminology');
+    const sidebar = document.getElementById('terminology-sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+
+    if (openBtn) {
+      openBtn.addEventListener('click', () => {
+        sidebar.classList.add('is-open');
+        overlay.classList.add('is-visible');
+        document.body.style.overflow = 'hidden';
+      });
+    }
+
+    const closeSidebar = () => {
+      sidebar.classList.remove('is-open');
+      overlay.classList.remove('is-visible');
+      document.body.style.overflow = '';
+    };
+
+    if (closeBtn) closeBtn.addEventListener('click', closeSidebar);
+    if (overlay) overlay.addEventListener('click', closeSidebar);
+
+    // Close details when Cancel is clicked
+    document.querySelectorAll('.close-card-button').forEach(button => {
+      button.addEventListener('click', () => {
+        const details = document.getElementById(button.dataset.target);
+        if (details) details.removeAttribute('open');
+      });
+    });
+
     // Highlight search query
     const urlParams = new URLSearchParams(window.location.search);
     const query = urlParams.get('q');
@@ -142,12 +217,9 @@
       document.querySelectorAll('.workspace-text, .workspace-current p').forEach(el => {
         const originalText = el.textContent;
         if (regex.test(originalText)) {
-          // Escape the original text first to prevent XSS
           const div = document.createElement('div');
           div.textContent = originalText;
           const escapedText = div.innerHTML;
-          
-          // Apply highlight only to the escaped text
           el.innerHTML = escapedText.replace(regex, '<mark style="background:rgba(46, 102, 74, 0.2); color: inherit; padding: 0 2px; border-radius: 3px;">$1</mark>');
         }
       });

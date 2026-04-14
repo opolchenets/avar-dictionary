@@ -1,37 +1,73 @@
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from corpus.models import Category, Sentence
+from accounts.models import Alliance, District
+from gamification.models import Achievement
 
-from corpus.models import Sentence
+ALLIANCES = {
+    "🔥 Юг": {
+        "color": "Красный/оранжевый",
+        "districts": ["Тлярата", "Цор", "Чарода"]
+    },
+    "⚫️ Центр": {
+        "color": "Золотой/серый",
+        "districts": ["Хунзах", "Унцукуль"]
+    },
+    "🌿 Запад": {
+        "color": "Зелёный",
+        "districts": ["Ботлих", "Цумада", "Цунта", "Ахвах"]
+    },
+    "🔵 Север": {
+        "color": "Синий/голубой",
+        "districts": ["Гумбет", "Салатавия", "Буйнакск"]
+    },
+    "🟡 Восток": {
+        "color": "Жёлтый/золотой",
+        "districts": ["Леваши", "Гуниб", "Шамильский", "Гергебиль"]
+    }
+}
 
-
-SAMPLE_SENTENCES = [
-    "Я получаю много денег за то, что я делаю.",
-    "Могу я попросить Тома о помощи?",
-    "Я соблюдаю правила шестидесяти.",
-    "Водить машину — очень веселое занятие.",
-    "Мне нужно сделать много работы.",
-    "Чтобы не попасть в могилу, я стараюсь делать поменьше.",
-    "Я хочу получить это как можно скорее.",
-    "Я устал и хочу пойти спать.",
-    "Мне от тебя нужно только одно — поговори с нами.",
-    "Я хочу выполнять свою работу как можно лучше.",
+CATEGORIES = [
+    ("Быт", "byt"),
+    ("Повседневные предложения", "povsednevnye"),
+    ("История", "istoriya"),
+    ("Биология", "biologiya"),
+    ("Логика и объяснения", "logika"),
 ]
 
+ACHIEVEMENTS = [
+    ("Первый шаг", 1, "🥉"),
+    ("Новичок", 5, "🥈"),
+    ("Переводчик", 10, "🥇"),
+    ("Опытный", 25, "💎"),
+    ("Мастер", 50, "🏆"),
+    ("Легенда", 100, "👑"),
+]
 
 class Command(BaseCommand):
-    help = "Populate the database with initial Russian sample sentences when corpus is empty."
+    help = "Seed initial data: Categories, Alliances, Districts, Achievements."
 
+    @transaction.atomic
     def handle(self, *args, **options):
-        if Sentence.objects.exists():
-            self.stdout.write(
-                self.style.WARNING("Пропущено: в корпусе уже есть предложения.")
-            )
-            return
+        # 1. Categories
+        for name, slug in CATEGORIES:
+            Category.objects.get_or_create(slug=slug, defaults={"name": name})
+        self.stdout.write(self.style.SUCCESS("Categories created."))
 
-        Sentence.objects.bulk_create(
-            [Sentence(source_text_ru=text) for text in SAMPLE_SENTENCES]
-        )
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Добавлены стартовые примеры предложений: {len(SAMPLE_SENTENCES)}."
+        # 2. Alliances & Districts
+        for alliance_name, data in ALLIANCES.items():
+            alliance, _ = Alliance.objects.get_or_create(
+                name=alliance_name, 
+                defaults={"color": data["color"]}
             )
-        )
+            for dist_name in data["districts"]:
+                District.objects.get_or_create(name=dist_name, defaults={"alliance": alliance})
+        self.stdout.write(self.style.SUCCESS("Alliances and Districts created."))
+
+        # 3. Achievements
+        for name, threshold, icon in ACHIEVEMENTS:
+            Achievement.objects.get_or_create(
+                threshold=threshold, 
+                defaults={"name": name, "icon": icon}
+            )
+        self.stdout.write(self.style.SUCCESS("Achievements created."))

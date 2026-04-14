@@ -3,19 +3,19 @@
 {% block title %}Кабинет Редактора{% endblock %}
 
 {% block content %}
-<div style="max-width: 900px; margin: 2rem auto;">
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; border-bottom: 2px solid var(--line); padding-bottom: 1rem;">
+<div class="page-narrow" style="max-width: 900px; margin: 2rem auto;">
+  <div class="action-row action-row--between" style="margin-bottom: 2rem; border-bottom: 2px solid var(--line); padding-bottom: 1rem;">
     <div>
       <p style="color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85rem; margin: 0 0 0.5rem;">Avar Corpus</p>
       <h1 style="margin: 0; font-size: 2.2rem; color: var(--ink);">Кабинет Редактора</h1>
     </div>
-    <div style="display: flex; gap: 0.8rem;">
+    <div class="editor-toolbar">
       <a class="button ghost" href="{% url 'editor-export' %}">Экспорт CSV</a>
       <a class="button" href="{% url 'editor-import' %}">+ Импорт фраз</a>
     </div>
   </div>
 
-  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 3rem;">
+  <section class="editor-stats-grid">
     <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow);">
       <span style="display: block; font-size: 2.5rem; font-weight: 700; color: var(--ink); line-height: 1;">{{ sentence_count }}</span>
       <span style="color: var(--muted); font-size: 0.95rem; font-weight: 600; margin-top: 0.5rem; display: block;">Фраз в базе</span>
@@ -30,32 +30,45 @@
     </div>
   </section>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+  <div class="editor-dashboard-grid">
     <section>
       <h2 style="font-size: 1.4rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">Инструменты</h2>
       
-      <a href="{% url 'editor-suggestions' %}" style="display: block; text-decoration: none; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem; margin-bottom: 1rem; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+      <a href="{% url 'editor-suggestions' %}" class="editor-tool-link" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
         <h3 style="margin: 0 0 0.4rem; color: var(--accent); font-size: 1.15rem;">Модерация правок {% if pending_count > 0 %}<span style="background: var(--danger); color: white; border-radius: 999px; padding: 0.1rem 0.5rem; font-size: 0.8rem; margin-left: 0.5rem;">{{ pending_count }}</span>{% endif %}</h3>
         <p style="margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.4;">Проверка, редактирование и принятие предложенных пользователями переводов.</p>
       </a>
 
-      <a href="{% url 'editor-sentences' %}" style="display: block; text-decoration: none; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+      <a href="{% url 'editor-sentences' %}" class="editor-tool-link" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
         <h3 style="margin: 0 0 0.4rem; color: var(--ink); font-size: 1.15rem;">База предложений</h3>
         <p style="margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.4;">Полный список фраз. Редактирование исходников, удаление дублей и поиск.</p>
+      </a>
+
+      <a href="{% url 'editor-terminology' %}" class="editor-tool-link" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0 0 0.4rem; color: var(--ink); font-size: 1.15rem;">Терминология</h3>
+          <span style="font-size: 0.8rem; color: var(--accent); font-weight: 700;">+ Импорт</span>
+        </div>
+        <p style="margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.4;">Управление словарями сложных слов для каждого раздела отдельно.</p>
+      </a>
+
+      <a href="/admin/accounts/alliance/" class="editor-tool-link" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+        <h3 style="margin: 0 0 0.4rem; color: var(--ink); font-size: 1.15rem;">Альянсы и иконки</h3>
+        <p style="margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.4;">Загрузка логотипов для альянсов и управление цветами через админку.</p>
       </a>
     </section>
 
     <section>
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+      <div class="action-row action-row--between" style="border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
         <h2 style="margin: 0; font-size: 1.4rem;">Последние добавленные</h2>
         <a href="{% url 'editor-sentences' %}" style="color: var(--accent); font-weight: 600; text-decoration: none; font-size: 0.9rem;">Смотреть все</a>
       </div>
       
-      <div style="display: grid; gap: 0.8rem;">
+      <div class="editor-dashboard-list">
         {% for sentence in latest_sentences %}
-          <a href="{% url 'editor-sentence-detail' sentence.pk %}" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; background: var(--soft); padding: 0.8rem 1rem; border-radius: 10px; color: var(--ink);">
-            <span style="color: var(--muted); font-weight: 600; font-size: 0.85rem; min-width: 40px;">#{{ sentence.id }}</span>
-            <span style="font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;">{{ sentence.source_text_ru }}</span>
+          <a href="{% url 'editor-sentence-detail' sentence.pk %}" class="editor-dashboard-item">
+            <span class="editor-dashboard-item-id">#{{ sentence.id }}</span>
+            <span class="editor-dashboard-item-copy">{{ sentence.source_text_ru }}</span>
           </a>
         {% empty %}
           <p style="color: var(--muted); text-align: center; padding: 2rem 0; background: var(--soft); border-radius: 10px;">Корпус пока пуст.</p>

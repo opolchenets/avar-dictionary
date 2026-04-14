@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Импорт терминологии — Панель редактора{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Editor</p>
+      <h1>Импорт терминологии (CSV)</h1>
+    </div>
+    <a href="{% url 'editor-terminology' %}" class="button ghost">Назад к списку</a>
+  </section>
+
+  <section class="panel narrow">
+    <form method="post" enctype="multipart/form-data" class="stack">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <div style="background: var(--soft); padding: 1rem; border-radius: 10px; font-size: 0.85rem; color: var(--muted);">
+        <p style="margin-top: 0;"><strong>Подсказка по формату:</strong></p>
+        <p>CSV файл без заголовков. Разделитель - запятая.</p>
+        <p>Пример:<br><code>слово,таржама</code><br><code>фраза,хисаб</code></p>
+        <p>Дубликаты (по RU слову) в выбранном разделе будут пропущены автоматически.</p>
+      </div>
+      <button type="submit" class="button">Импортировать</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

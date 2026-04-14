@@ -1,10 +1,11 @@
+import datetime
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db.models import BooleanField, Exists, OuterRef, Prefetch
-from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views import View
 from django.db.models.functions import TruncDate
@@ -13,11 +14,8 @@ from django.views.generic import DetailView, ListView, TemplateView
 from suggestions.models import SuggestionVote, TranslationSuggestion
 
 from .forms import SentenceFilterForm, TranslationSubmissionForm
-from .models import Sentence
-
-
-class TranslationSubmissionError(Exception):
-    pass
+from .models import Category, Sentence, Terminology
+from .services import TranslationWorkflowError, submit_translation
 
 
 def get_safe_redirect(request, fallback):
@@ -41,34 +39,6 @@ def build_suggestions_queryset(user):
         )
         return queryset.annotate(user_voted=Exists(vote_subquery))
     return queryset.annotate(user_voted=Value(False, output_field=BooleanField()))
-
-
-def submit_translation(*, user, sentence_id, translated_text):
-    with transaction.atomic():
-        sentence = Sentence.objects.select_for_update().get(pk=sentence_id)
-
-        if sentence.text_av and sentence.text_av.strip() == translated_text:
-            raise TranslationSubmissionError("Этот перевод уже является основным.")
-
-        duplicate = sentence.suggestions.filter(
-            proposed_text_av__iexact=translated_text
-        ).exists()
-        if duplicate:
-            raise TranslationSubmissionError(
-                "Такой вариант уже предложен. Лучше проголосуйте за него."
-            )
-
-        suggestion = TranslationSuggestion.objects.create(
-            sentence=sentence,
-            proposed_text_av=translated_text,
-            author=user,
-        )
-        if sentence.status == Sentence.Status.UNTRANSLATED:
-            sentence.status = Sentence.Status.PENDING
-            sentence.save(update_fields=["status", "updated_at"])
-        return "Перевод на аварский отправлен редактору на проверку."
-
-
 class HomeView(TemplateView):
     template_name = "home.html"
 
@@ -115,11 +85,26 @@ class HomeView(TemplateView):
         history_labels = []
         history_values = []
         cumulative = 0
-        for entry in history_raw:
-            if entry["date"]:
-                cumulative += entry["count"]
-                history_labels.append(entry["date"].strftime("%d.%m"))
-                history_values.append(cumulative)
+        
+        # If no history yet, or only one point, add a zero-start point
+        if not history_raw:
+            from django.utils import timezone
+            import datetime
+            history_labels = [(timezone.now() - datetime.timedelta(days=1)).strftime("%d.%m"), timezone.now().strftime("%d.%m")]
+            history_values = [0, 0]
+        else:
+            # If only one day of history, add a leading zero point
+            if len(history_raw) == 1:
+                first_date = history_raw[0]["date"]
+                if first_date:
+                    history_labels.append((first_date - datetime.timedelta(days=1)).strftime("%d.%m"))
+                    history_values.append(0)
+
+            for entry in history_raw:
+                if entry["date"]:
+                    cumulative += entry["count"]
+                    history_labels.append(entry["date"].strftime("%d.%m"))
+                    history_values.append(cumulative)
         
         context["history_labels"] = history_labels
         context["history_values"] = history_values
@@ -137,7 +122,7 @@ class SentenceListView(ListView):
         pending_suggestions = build_suggestions_queryset(self.request.user).filter(
             status=TranslationSuggestion.Status.PENDING
         ).order_by("-vote_count", "-created_at")
-        queryset = Sentence.objects.select_related("translated_by").prefetch_related(
+        queryset = Sentence.objects.select_related("translated_by", "category").prefetch_related(
             Prefetch(
                 "suggestions",
                 queryset=pending_suggestions,
@@ -149,6 +134,7 @@ class SentenceListView(ListView):
         if self.filter_form.is_valid():
             query = self.filter_form.cleaned_data.get("q")
             status = self.filter_form.cleaned_data.get("status") or "all"
+            category = self.filter_form.cleaned_data.get("category")
 
             if query:
                 queryset = queryset.filter(
@@ -157,6 +143,8 @@ class SentenceListView(ListView):
                 )
             if status != "all":
                 queryset = queryset.filter(status=status)
+            if category:
+                queryset = queryset.filter(category=category)
 
         return queryset.annotate(
             untranslated_first=Case(
@@ -170,6 +158,15 @@ class SentenceListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["filter_form"] = self.filter_form
+        context["categories"] = Category.objects.all()
+        
+        current_category_slug = self.request.GET.get("category")
+        if current_category_slug:
+            context["current_category"] = Category.objects.filter(slug=current_category_slug).first()
+            context["terms"] = Terminology.objects.filter(category__slug=current_category_slug)
+        else:
+            context["terms"] = Terminology.objects.none()
+
         context["total_count"] = Sentence.objects.count()
         context["translated_count"] = Sentence.objects.filter(
             status=Sentence.Status.TRANSLATED
@@ -205,7 +202,7 @@ class SentenceListView(ListView):
                 sentence_id=sentence_id,
                 translated_text=translated_text,
             )
-        except TranslationSubmissionError as error:
+        except TranslationWorkflowError as error:
             messages.error(request, str(error))
         else:
             messages.success(request, message)
@@ -246,7 +243,7 @@ class SentenceDetailView(DetailView):
                 sentence_id=self.object.pk,
                 translated_text=translated_text,
             )
-        except TranslationSubmissionError as error:
+        except TranslationWorkflowError as error:
             form.add_error("text_av", str(error))
             return self.render_to_response(self.get_context_data(form=form))
         else:

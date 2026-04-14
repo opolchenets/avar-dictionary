@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Управление терминологией — Панель редактора{% endblock %}
+
+{% block content %}
+<div class="page-narrow">
+  <section class="section-head">
+    <div>
+      <p class="eyebrow">Редакторская панель</p>
+      <h1>Терминология</h1>
+    </div>
+    <div class="action-row">
+      <a href="{% url 'editor-import-terminology' %}" class="button">+ Импорт CSV</a>
+      <a href="{% url 'editor-dashboard' %}" class="button ghost">Назад в панель</a>
+    </div>
+  </section>
+
+  <div class="editor-terminology-layout">
+    <section class="panel">
+      <div class="editor-terminology-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0;">Список терминов</h2>
+        <form method="get" class="action-row">
+          <select name="category" onchange="this.form.submit()" style="padding: 0.5rem;">
+            <option value="">Все разделы</option>
+            {% for cat in categories %}
+              <option value="{{ cat.slug }}" {% if request.GET.category == cat.slug %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+
+      <form method="post" id="bulk-delete-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="bulk_delete">
+        <input type="hidden" name="bulk_ids" id="bulk-ids-input" value="">
+        
+        <div style="margin-bottom: 1rem; display: flex; gap: 1rem; align-items: center;">
+          <button type="submit" class="button danger" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="return confirm('Удалить выбранные термины?')">Удалить выбранные</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="terminology-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox" id="select-all"></th>
+                <th>Раздел</th>
+                <th>RU</th>
+                <th>AV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for term in terms %}
+                <tr>
+                  <td><input type="checkbox" class="term-checkbox" value="{{ term.pk }}"></td>
+                  <td><span class="badge">{{ term.category.name }}</span></td>
+                  <td><strong>{{ term.word_ru }}</strong></td>
+                  <td>{{ term.word_av }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 3rem;">Терминов пока нет.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </form>
+
+      {% if is_paginated %}
+        <nav class="pagination" style="margin-top: 2rem;">
+          {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="button ghost">Назад</a>
+          {% endif %}
+          <span style="margin: 0 1rem;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}" class="button ghost">Вперёд</a>
+          {% endif %}
+        </nav>
+      {% endif %}
+    </section>
+
+    <section class="panel">
+      <h2 style="margin-top: 0; margin-bottom: 1.5rem;">Добавить термин</h2>
+      <form method="post" class="stack">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="button" style="width: 100%;">Добавить</button>
+      </form>
+    </section>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function() {
+    const selectAll = document.getElementById('select-all');
+    const checkboxes = document.querySelectorAll('.term-checkbox');
+    const bulkIdsInput = document.getElementById('bulk-ids-input');
+    const form = document.getElementById('bulk-delete-form');
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateIds();
+      });
+    }
+
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', updateIds);
+    });
+
+    function updateIds() {
+      const selected = Array.from(checkboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+      bulkIdsInput.value = selected.join(',');
+    }
+
+    form.addEventListener('submit', function(e) {
+      if (bulkIdsInput.value === "") {
+        alert("Выберите хотя бы один термин.");
+        e.preventDefault();
+      }
+    });
+  })();
+</script>
+{% endblock %}

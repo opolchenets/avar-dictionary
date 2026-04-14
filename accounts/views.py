@@ -7,10 +7,25 @@ from corpus.models import Sentence
 from suggestions.models import TranslationSuggestion
 from .forms import SimpleSignUpForm
 
+from django.urls import reverse_lazy
+from django.db import transaction
+from gamification.models import UserAchievement
+from .models import UserProfile
+
 class SignUpView(CreateView):
     form_class = SimpleSignUpForm
     template_name = "accounts/signup.html"
-    success_url = "/login/"
+    success_url = reverse_lazy("login")
+
+    def form_valid(self, form):
+        with transaction.atomic():
+            response = super().form_valid(form)
+            user = self.object
+            district = form.cleaned_data.get("district")
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.district = district
+            profile.save()
+            return response
 
 
 class ProfileView(LoginRequiredMixin, TemplateView):
@@ -27,6 +42,7 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context["translations_count"] = Sentence.objects.filter(translated_by=user).count()
         context["suggestions_count"] = TranslationSuggestion.objects.filter(author=user).count()
         context["accepted_suggestions_count"] = accepted_count
+        context["achievements"] = UserAchievement.objects.filter(user=user).select_related("achievement")
         return context
 
 
