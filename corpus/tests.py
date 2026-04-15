@@ -23,6 +23,15 @@ class CorpusFlowTests(TestCase):
         self.sentence.refresh_from_db()
         self.assertEqual(self.sentence.text_av, "")
 
+    def test_home_renders_when_translations_exist_only_for_one_day(self):
+        self.sentence.status = Sentence.Status.TRANSLATED
+        self.sentence.text_av = "ТӀехь."
+        self.sentence.save()
+
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+
     def test_first_translation_creates_pending_suggestion(self):
         self.client.login(username="user", password="Strong-pass123")
         response = self.client.post(

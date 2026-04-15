@@ -88,9 +88,10 @@ class HomeView(TemplateView):
         
         # If no history yet, or only one point, add a zero-start point
         if not history_raw:
-            from django.utils import timezone
-            import datetime
-            history_labels = [(timezone.now() - datetime.timedelta(days=1)).strftime("%d.%m"), timezone.now().strftime("%d.%m")]
+            history_labels = [
+                (timezone.now() - datetime.timedelta(days=1)).strftime("%d.%m"),
+                timezone.now().strftime("%d.%m"),
+            ]
             history_values = [0, 0]
         else:
             # If only one day of history, add a leading zero point

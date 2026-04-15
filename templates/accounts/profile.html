@@ -7,9 +7,9 @@
   <section class="section-head">
     <div>
       <p class="eyebrow">Личный кабинет</p>
-      <h1>{{ request.user.profile.display_name|default:request.user.username }}</h1>
+      <h1>{{ profile.display_name|default:request.user.username }}</h1>
     </div>
-    {% if request.user.is_staff or request.user.profile.is_editor %}
+    {% if request.user.is_staff or profile.is_editor %}
       <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
     {% endif %}
   </section>
@@ -34,6 +34,26 @@
   </div>
 
   <section class="panel" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Никнейм</h2>
+    <form method="post" style="display: grid; gap: 1rem;">
+      {% csrf_token %}
+      <div>
+        {{ profile_form.display_name.label_tag }}
+        {{ profile_form.display_name }}
+        {% if profile_form.display_name.help_text %}
+          <p style="margin: 0.4rem 0 0; color: var(--muted); font-size: 0.85rem;">{{ profile_form.display_name.help_text }}</p>
+        {% endif %}
+        {% for error in profile_form.display_name.errors %}
+          <p style="margin: 0.4rem 0 0; color: var(--danger); font-size: 0.85rem;">{{ error }}</p>
+        {% endfor %}
+      </div>
+      <div>
+        <button type="submit">Сохранить никнейм</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel" style="margin-bottom: 1.5rem;">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Достижения</h2>
     <div class="achievement-grid">
       {% for ua in achievements %}
@@ -51,31 +71,35 @@
   <section class="panel">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Информация об аккаунте</h2>
     <div class="info-rows">
-      {% if request.user.profile.district %}
+      {% if profile.district %}
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Альянс</span>
         <span class="info-value info-value--with-icon">
-          {% if request.user.profile.district.alliance.icon %}
-            <img src="{{ request.user.profile.district.alliance.icon.url }}" style="height: 24px;">
+          {% if profile.district.alliance.icon %}
+            <img src="{{ profile.district.alliance.icon.url }}" style="height: 24px;">
           {% endif %}
-          <span style="color: {{ request.user.profile.district.alliance.color }}">{{ request.user.profile.district.alliance.name }}</span>
+          <span style="color: {{ profile.district.alliance.color }}">{{ profile.district.alliance.name }}</span>
         </span>
       </div>
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Район</span>
-        <span class="info-value">{{ request.user.profile.district.name }}</span>
+        <span class="info-value">{{ profile.district.name }}</span>
       </div>
       {% endif %}
+      <div class="info-row">
+        <span style="color: var(--muted); font-weight: 600;">Никнейм</span>
+        <span class="info-value">{{ profile.display_name|default:request.user.username }}</span>
+      </div>
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Логин</span>
         <span class="info-value">{{ request.user.username }}</span>
       </div>
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Роль</span>
-        <span class="badge {% if request.user.profile.is_editor %}done{% endif %} info-value">
+        <span class="badge {% if profile.is_editor %}done{% endif %} info-value">
           {% if request.user.is_superuser %}
             Администратор
-          {% elif request.user.is_staff or request.user.profile.role == 'editor' %}
+          {% elif request.user.is_staff or profile.role == 'editor' %}
             Редактор
           {% else %}
             Переводчик

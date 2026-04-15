@@ -30,3 +30,36 @@ class SignUpTests(TestCase):
         user = User.objects.get(username="translator")
         self.assertEqual(user.username, "translator")
         self.assertEqual(user.profile.district, self.district)
+
+    def test_profile_allows_updating_display_name(self):
+        user = User.objects.create_user(
+            username="translator",
+            password="Strong-pass123",
+        )
+        self.client.login(username="translator", password="Strong-pass123")
+
+        response = self.client.post(
+            reverse("profile"),
+            {"display_name": "Новый ник"},
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        user.refresh_from_db()
+        self.assertEqual(user.profile.display_name, "Новый ник")
+
+    def test_profile_recreates_missing_profile_on_update(self):
+        user = User.objects.create_user(
+            username="translator2",
+            password="Strong-pass123",
+        )
+        user.profile.delete()
+        self.client.login(username="translator2", password="Strong-pass123")
+
+        response = self.client.post(
+            reverse("profile"),
+            {"display_name": "Возвращенный профиль"},
+        )
+
+        self.assertRedirects(response, reverse("profile"))
+        user.refresh_from_db()
+        self.assertEqual(user.profile.display_name, "Возвращенный профиль")

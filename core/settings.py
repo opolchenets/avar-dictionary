@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,6 +22,23 @@ DEBUG = env_bool("DJANGO_DEBUG", "True")
 USE_WHITENOISE = env_bool("DJANGO_USE_WHITENOISE", "True") and bool(
     importlib.util.find_spec("whitenoise")
 )
+USE_FALLBACK_ADMIN_MIGRATIONS = (
+    importlib.util.find_spec("django.contrib.admin.migrations.0001_initial") is None
+)
+USE_FALLBACK_TEST_MIGRATIONS = "test" in sys.argv and any(
+    importlib.util.find_spec(module) is None
+    for module in (
+        "django.contrib.auth.migrations.0001_initial",
+        "django.contrib.contenttypes.migrations.0001_initial",
+        "django.contrib.sessions.migrations.0001_initial",
+    )
+)
+USE_PROXY_SSL_HEADER = env_bool("DJANGO_USE_PROXY_SSL_HEADER", "True")
+ENABLE_SECURE_SSL_REDIRECT = env_bool(
+    "DJANGO_SECURE_SSL_REDIRECT",
+    "False" if DEBUG else "True",
+)
+HSTS_SECONDS = int(os.getenv("DJANGO_SECURE_HSTS_SECONDS", "31536000"))
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -55,14 +73,15 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_REFERRER_POLICY = "same-origin"
 
-# Fix for ERR_TOO_MANY_REDIRECTS when behind a proxy
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+if USE_PROXY_SSL_HEADER:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SECURE_SSL_REDIRECT = ENABLE_SECURE_SSL_REDIRECT if not DEBUG else False
 
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_SECONDS = HSTS_SECONDS
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
@@ -119,6 +138,18 @@ else:
         }
     }
 
+if USE_FALLBACK_TEST_MIGRATIONS:
+    class DisableMigrations(dict):
+        def __contains__(self, item):
+            return True
+
+        def __getitem__(self, item):
+            return None
+
+    MIGRATION_MODULES = DisableMigrations()
+elif USE_FALLBACK_ADMIN_MIGRATIONS:
+    MIGRATION_MODULES = {"admin": "core.admin_migrations"}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
@@ -142,6 +173,9 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 
 STORAGES = {
     "default": {
