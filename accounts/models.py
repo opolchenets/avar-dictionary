@@ -58,6 +58,10 @@ class UserProfile(models.Model):
         related_name="profiles",
         verbose_name="Район",
     )
+    
+    # Метрики качества
+    average_quality_score = models.FloatField("Среднее качество", default=0.0)
+    accepted_suggestions_count = models.IntegerField("Принято правок", default=0)
 
     class Meta:
         verbose_name = "Профиль пользователя"
@@ -69,3 +73,30 @@ class UserProfile(models.Model):
     @property
     def is_editor(self) -> bool:
         return self.role == self.Role.EDITOR or self.user.is_staff or self.user.is_superuser
+    
+    @property
+    def quality_percentage(self) -> int:
+        return int(self.average_quality_score * 100)
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    suggestion = models.ForeignKey(
+        "suggestions.TranslationSuggestion",
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    is_read = models.BooleanField("Прочитано", default=False)
+    created_at = models.DateTimeField("Создано", auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
+
+    def __str__(self) -> str:
+        return f"{self.user} -> {self.suggestion_id}"

@@ -50,9 +50,9 @@ class HomeView(TemplateView):
         context["translated_count"] = Sentence.objects.filter(
             status=Sentence.Status.TRANSLATED
         ).count()
-        context["pending_count"] = TranslationSuggestion.objects.filter(
-            status=TranslationSuggestion.Status.PENDING
-        ).count()
+        context["pending_count"] = Sentence.objects.filter(
+            suggestions__status=TranslationSuggestion.Status.PENDING
+        ).distinct().count()
         context["user_count"] = user_model.objects.count()
         
         context["latest_translations"] = Sentence.objects.filter(
@@ -175,9 +175,9 @@ class SentenceListView(ListView):
         context["untranslated_count"] = Sentence.objects.filter(
             status=Sentence.Status.UNTRANSLATED
         ).count()
-        context["pending_count"] = TranslationSuggestion.objects.filter(
-            status=TranslationSuggestion.Status.PENDING
-        ).count()
+        context["pending_count"] = Sentence.objects.filter(
+            suggestions__status=TranslationSuggestion.Status.PENDING
+        ).distinct().count()
         return context
 
     def post(self, request, *args, **kwargs):
@@ -218,7 +218,23 @@ class SentenceDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.setdefault("form", TranslationSubmissionForm())
+        
+        # Предзаполняем форму текущим вариантом пользователя, если он есть и на проверке
+        user_suggestion = None
+        if self.request.user.is_authenticated:
+            user_suggestion = TranslationSuggestion.objects.filter(
+                sentence=self.object,
+                author=self.request.user,
+                status=TranslationSuggestion.Status.PENDING
+            ).first()
+            
+        initial_data = {}
+        if user_suggestion:
+            initial_data['text_av'] = user_suggestion.proposed_text_av
+            context['user_suggestion'] = user_suggestion
+            
+        context.setdefault("form", TranslationSubmissionForm(initial=initial_data))
+        
         suggestions = build_suggestions_queryset(self.request.user)
         context["pending_suggestions"] = suggestions.filter(
             status=TranslationSuggestion.Status.PENDING

@@ -11,7 +11,19 @@ from .forms import ProfileDisplayNameForm, SimpleSignUpForm
 from django.urls import reverse_lazy
 from django.db import transaction
 from gamification.models import UserAchievement
-from .models import UserProfile
+from .models import UserProfile, Notification
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+
+
+@login_required
+@require_POST
+def mark_notifications_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return JsonResponse({"status": "ok"})
+
 
 class SignUpView(CreateView):
     form_class = SimpleSignUpForm
@@ -57,6 +69,19 @@ class ProfileView(LoginRequiredMixin, TemplateView):
         context["suggestions_count"] = TranslationSuggestion.objects.filter(author=user).count()
         context["accepted_suggestions_count"] = accepted_count
         context["achievements"] = UserAchievement.objects.filter(user=user).select_related("achievement")
+        
+        # Переводы на проверке
+        context["pending_suggestions"] = TranslationSuggestion.objects.filter(
+            author=user,
+            status=TranslationSuggestion.Status.PENDING
+        ).select_related("sentence").order_by("-created_at")
+        
+        # Принятые переводы
+        context["accepted_suggestions"] = TranslationSuggestion.objects.filter(
+            author=user,
+            status=TranslationSuggestion.Status.ACCEPTED
+        ).select_related("sentence").order_by("-created_at")
+        
         return context
 
     def post(self, request, *args, **kwargs):

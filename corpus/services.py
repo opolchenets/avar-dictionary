@@ -1,4 +1,5 @@
 import re
+import difflib
 from django.db import transaction
 from django.utils import timezone
 from django.utils.html import strip_tags
@@ -14,6 +15,20 @@ class TranslationWorkflowError(Exception):
     pass
 
 
+def get_or_create_user_profile(user):
+    from accounts.models import UserProfile
+
+    profile, _ = UserProfile.objects.get_or_create(
+        user=user,
+        defaults={"display_name": user.get_username()},
+    )
+    if profile.average_quality_score is None:
+        profile.average_quality_score = 0.0
+    if profile.accepted_suggestions_count is None:
+        profile.accepted_suggestions_count = 0
+    return profile
+
+
 def normalize_avar_text(text: str) -> str:
     if not text:
         return ""
@@ -22,8 +37,6 @@ def normalize_avar_text(text: str) -> str:
     text = strip_tags(text).strip()
     
     # 2. Замена технических символов на правильную аварскую орфографию
-    # Заменяем цифру 1 или латинскую I/l на кириллическую палочку Ӏ
-    # (часто используется в аварском для обозначения гортанных смычных)
     text = re.sub(r'[1Il]', 'Ӏ', text)
     
     # 3. Принудительная точка в конце предложения
@@ -71,20 +84,42 @@ def submit_translation(*, user, sentence_id: int, translated_text: str) -> str:
 
     sentence = Sentence.objects.select_for_update().get(pk=sentence_id)
 
+    if sentence.status == Sentence.Status.TRANSLATED:
+        raise TranslationWorkflowError("Это предложение уже переведено и заблокировано для новых правок.")
+
     if sentence.text_av and sentence.text_av == cleaned_text:
         raise TranslationWorkflowError("Этот перевод уже является основным.")
 
+    # Проверяем дубликаты от других
     duplicate = sentence.suggestions.filter(
-        proposed_text_av__iexact=cleaned_text
-    ).exists()
+        proposed_text_av__iexact=cleaned_text,
+        status=TranslationSuggestion.Status.PENDING
+    ).exclude(author=user).exists()
     if duplicate:
         raise TranslationWorkflowError(
-            "Такой вариант уже предложен. Лучше проголосуйте за него."
+            "Такой вариант уже предложен другим участником. Лучше проголосуйте за него."
         )
+
+    # Ищем существующую PENDING правку этого автора
+    existing_suggestion = sentence.suggestions.filter(
+        author=user,
+        status=TranslationSuggestion.Status.PENDING
+    ).first()
+
+    if existing_suggestion:
+        if existing_suggestion.proposed_text_av == cleaned_text:
+            raise TranslationWorkflowError("Вы уже предложили точно такой же вариант.")
+        
+        existing_suggestion.proposed_text_av = cleaned_text
+        existing_suggestion.original_text_av = cleaned_text
+        existing_suggestion.created_at = timezone.now()
+        existing_suggestion.save()
+        return "Ваш предложенный перевод успешно обновлен."
 
     TranslationSuggestion.objects.create(
         sentence=sentence,
         proposed_text_av=cleaned_text,
+        original_text_av=cleaned_text,
         author=user,
     )
 
@@ -104,41 +139,71 @@ def review_translation_suggestion(
     note: str = "",
     edited_text: str = "",
 ) -> TranslationSuggestion:
-    suggestion = (
-        TranslationSuggestion.objects.select_for_update()
-        .select_related("sentence", "author")
-        .get(pk=suggestion_id)
-    )
+    try:
+        suggestion = (
+            TranslationSuggestion.objects.select_for_update()
+            .select_related("sentence", "author")
+            .get(pk=suggestion_id)
+        )
+    except TranslationSuggestion.DoesNotExist:
+        raise TranslationWorkflowError("Правка не найдена.")
 
     if suggestion.status != TranslationSuggestion.Status.PENDING:
         raise TranslationWorkflowError("Эта правка уже обработана.")
 
-    # Если редактор правил текст вручную при проверке - нормализуем и его
-    cleaned_text = normalize_avar_text(edited_text)
-    if cleaned_text and cleaned_text != suggestion.proposed_text_av:
-        suggestion.proposed_text_av = cleaned_text
-        suggestion.save(update_fields=["proposed_text_av"])
+    # Запоминаем оригинал
+    user_original_version = (suggestion.original_text_av or suggestion.proposed_text_av or "").strip()
 
+    # Если редактор передал пустой текст - значит он не правил, берем текущий из правки
+    final_text_to_approve = normalize_avar_text(edited_text) or suggestion.proposed_text_av
+
+    suggestion.proposed_text_av = final_text_to_approve
     suggestion.reviewed_by = reviewer
     suggestion.reviewed_at = timezone.now()
     suggestion.editor_note = note
 
     if action == "accept":
+        # РАСЧЕТ КАЧЕСТВА
+        matcher = difflib.SequenceMatcher(None, user_original_version, final_text_to_approve)
+        score = matcher.ratio()
+        suggestion.similarity_score = score
+
+        # Обновляем профиль автора.
+        profile = get_or_create_user_profile(suggestion.author)
+        cur_avg = profile.average_quality_score or 0.0
+        cur_count = profile.accepted_suggestions_count or 0
+        new_count = cur_count + 1
+        profile.average_quality_score = ((cur_avg * cur_count) + score) / new_count
+        profile.accepted_suggestions_count = new_count
+        profile.save(update_fields=["average_quality_score", "accepted_suggestions_count"])
+
+        # Обновляем предложение
         set_sentence_translation(
             suggestion.sentence,
-            translated_text=suggestion.proposed_text_av,
+            translated_text=final_text_to_approve,
             translated_by=suggestion.author,
         )
         suggestion.sentence.save()
+        
         suggestion.status = TranslationSuggestion.Status.ACCEPTED
-        suggestion.save(
-            update_fields=[
-                "status",
-                "reviewed_by",
-                "reviewed_at",
-                "editor_note",
-            ]
-        )
+        suggestion.save()
+
+        # Создаем уведомление для автора
+        from accounts.models import Notification
+        Notification.objects.create(user=suggestion.author, suggestion=suggestion)
+
+        # Отклоняем остальные
+        other_pending = suggestion.sentence.suggestions.filter(
+            status=TranslationSuggestion.Status.PENDING
+        ).exclude(pk=suggestion.pk)
+        
+        for other in other_pending:
+            other.status = TranslationSuggestion.Status.REJECTED
+            other.reviewed_by = reviewer
+            other.reviewed_at = timezone.now()
+            other.editor_note = f"Автоматически отклонено: принят другой вариант (#{suggestion.pk})"
+            other.save()
+
         award_points(
             user=suggestion.author,
             reason=PointLedger.Reason.SUGGESTION_ACCEPTED,
@@ -150,15 +215,12 @@ def review_translation_suggestion(
 
     if action == "reject":
         suggestion.status = TranslationSuggestion.Status.REJECTED
-        suggestion.save(
-            update_fields=[
-                "status",
-                "reviewed_by",
-                "reviewed_at",
-                "editor_note",
-            ]
-        )
-        # Просто пересчитываем статус предложения (вдруг там есть другие правки)
+        suggestion.save()
+
+        # Создаем уведомление для автора
+        from accounts.models import Notification
+        Notification.objects.create(user=suggestion.author, suggestion=suggestion)
+        
         set_sentence_translation(
             suggestion.sentence,
             translated_text=suggestion.sentence.text_av,
