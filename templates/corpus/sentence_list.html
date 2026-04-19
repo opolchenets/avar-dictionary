@@ -103,25 +103,34 @@
             <div class="workspace-current">
               <span>Текущий перевод (аварский)</span>
               <p>{{ sentence.text_av }}</p>
+              {% if sentence.translated_by %}
+                <p class="subtle" style="font-size: 0.8rem; margin-top: 0.5rem;">
+                  Перевод от: <strong>{{ sentence.translated_by.profile.display_name|default:sentence.translated_by.username }}</strong>
+                </p>
+              {% endif %}
             </div>
           {% endif %}
 
           {% if request.user.is_authenticated %}
-            <form method="post" action="{% url 'sentence-list' %}" class="workspace-form stack">
-              {% csrf_token %}
-              <input type="hidden" name="sentence_id" value="{{ sentence.id }}">
-              <input type="hidden" name="next" value="{{ request.get_full_path }}#sentence-{{ sentence.id }}">
-              <div>
-                <label for="translation-{{ sentence.id }}">Ваш перевод на аварский язык</label>
-                <textarea id="translation-{{ sentence.id }}" name="text_av" rows="2" placeholder="Введите перевод на аварский..." required></textarea>
+            {% if sentence.status != 'translated' %}
+              <form method="post" action="{% url 'sentence-list' %}" class="workspace-form stack">
+                {% csrf_token %}
+                <input type="hidden" name="sentence_id" value="{{ sentence.id }}">
+                <input type="hidden" name="next" value="{{ request.get_full_path }}#sentence-{{ sentence.id }}">
+                <div>
+                  <label for="translation-{{ sentence.id }}">Ваш перевод на аварский язык</label>
+                  <textarea id="translation-{{ sentence.id }}" name="text_av" rows="2" placeholder="Введите перевод на аварский..." required></textarea>
+                </div>
+                <div class="workspace-actions">
+                  <button type="button" class="button ghost close-card-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" data-target="sentence-{{ sentence.id }}">Отмена</button>
+                  <button type="submit" class="button" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">Отправить перевод</button>
+                </div>
+              </form>
+            {% else %}
+              <div class="panel" style="background: rgba(40, 167, 69, 0.05); border: 1px dashed var(--success); text-align: center; padding: 1rem;">
+                <p style="color: var(--success); font-weight: 700; margin: 0; font-size: 0.9rem;">✅ Предложение переведено и закрыто для новых правок.</p>
               </div>
-              <div class="workspace-actions">
-                <button type="button" class="button ghost close-card-button" style="padding: 0.5rem 1rem; font-size: 0.85rem;" data-target="sentence-{{ sentence.id }}">Отмена</button>
-                <button type="submit" class="button" style="padding: 0.5rem 1.25rem; font-size: 0.85rem;">
-                  {% if sentence.text_av %}Предложить вариант{% else %}Отправить перевод{% endif %}
-                </button>
-              </div>
-            </form>
+            {% endif %}
           {% else %}
             <p class="empty-state">Чтобы предложить перевод, нужно <a href="{% url 'login' %}?next={{ request.get_full_path }}#sentence-{{ sentence.id }}" style="color: var(--accent); font-weight: 700;">войти</a>.</p>
           {% endif %}

@@ -1,7 +1,7 @@
 import csv
 
 from django.contrib import messages
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -23,6 +23,24 @@ from .forms import (
     TerminologyForm,
     TerminologyImportForm,
 )
+
+
+def enrich_suggestion_author_stats(suggestions):
+    for suggestion in suggestions:
+        profile = getattr(suggestion.author, "profile", None)
+        quality_score = 0.0
+        accepted_count = 0
+        display_name = suggestion.author.username
+
+        if profile is not None:
+            quality_score = profile.average_quality_score or 0.0
+            accepted_count = profile.accepted_suggestions_count or 0
+            display_name = profile.display_name or suggestion.author.username
+
+        suggestion.author_display_name = display_name
+        suggestion.author_quality_score = quality_score
+        suggestion.author_accepted_suggestions_count = accepted_count
+        suggestion.author_quality_percentage = int(quality_score * 100)
 
 
 class TerminologyListView(EditorRequiredMixin, ListView):
@@ -112,9 +130,9 @@ class EditorDashboardView(EditorRequiredMixin, TemplateView):
         context["translated_count"] = Sentence.objects.filter(
             status=Sentence.Status.TRANSLATED
         ).count()
-        context["pending_count"] = TranslationSuggestion.objects.filter(
-            status=TranslationSuggestion.Status.PENDING
-        ).count()
+        context["pending_count"] = Sentence.objects.filter(
+            suggestions__status=TranslationSuggestion.Status.PENDING
+        ).distinct().count()
         context["latest_sentences"] = Sentence.objects.order_by("-created_at")[:10]
         return context
 
@@ -265,31 +283,49 @@ class SentenceImportView(EditorRequiredMixin, FormView):
 
 
 class SuggestionQueueView(EditorRequiredMixin, ListView):
-    model = TranslationSuggestion
+    model = Sentence
     template_name = "editor/suggestion_queue.html"
-    context_object_name = "suggestions"
-    paginate_by = 20
+    context_object_name = "sentences"
+    paginate_by = 10
 
     def handle_no_permission(self):
         return redirect("home")
 
     def get_queryset(self):
-        return TranslationSuggestion.objects.filter(
+        from django.db.models import Prefetch
+        
+        # Подготавливаем отсортированный кверисет для правок
+        sorted_suggestions = TranslationSuggestion.objects.filter(
             status=TranslationSuggestion.Status.PENDING
-        ).select_related(
-            "sentence",
-            "author",
-            "reviewed_by",
-        ).prefetch_related(
-            "sentence__suggestions"
+        ).select_related("author", "author__profile").annotate(
+            v_count=Count("votes")
+        ).order_by("-author__profile__average_quality_score", "-v_count", "-created_at")
+
+        # Получаем предложения, у которых есть ожидающие правки, 
+        # НО исключаем те, что уже официально переведены.
+        return Sentence.objects.filter(
+            suggestions__status=TranslationSuggestion.Status.PENDING
+        ).exclude(status=Sentence.Status.TRANSLATED).distinct().prefetch_related(
+            Prefetch("suggestions", queryset=sorted_suggestions, to_attr="pending_suggestions_list"),
+            "suggestions__votes",
         ).annotate(
-            vote_count=Count("votes", distinct=True)
-        ).order_by("-vote_count", "-created_at")
+            pending_suggestion_count=Count(
+                "suggestions",
+                filter=Q(suggestions__status=TranslationSuggestion.Status.PENDING)
+            )
+        ).order_by("-pending_suggestion_count", "id")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        for sentence in context["sentences"]:
+            enrich_suggestion_author_stats(sentence.pending_suggestions_list)
+        return context
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
         
         if action in ("bulk_accept", "bulk_reject"):
+            # Для массовых действий теперь принимаем список ID правок
             ids_str = request.POST.get("bulk_ids", "")
             ids = [int(i) for i in ids_str.split(",") if i.isdigit()]
             if not ids:
@@ -310,7 +346,13 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
             messages.success(request, f"Обработано правок: {count}.")
             return redirect("editor-suggestions")
 
-        suggestion = get_object_or_404(TranslationSuggestion, pk=request.POST.get("id"))
+        # Одиночное действие над правкой
+        suggestion_id = request.POST.get("id")
+        if not suggestion_id:
+             messages.error(request, "Не указан ID правки.")
+             return redirect("editor-suggestions")
+             
+        suggestion = get_object_or_404(TranslationSuggestion, pk=suggestion_id)
         note = request.POST.get("editor_note", "").strip()
         edited_text = request.POST.get("edited_text", "").strip()
 
@@ -326,7 +368,7 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
             messages.error(request, str(error))
         else:
             if action == "accept":
-                messages.success(request, "Правка принята.")
+                messages.success(request, "Правка принята. Остальные правки этого предложения отклонены.")
             elif action == "reject":
                 messages.success(request, "Правка отклонена.")
             else:
@@ -354,10 +396,41 @@ class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
         context["sentence_form"] = kwargs.get("sentence_form") or SentenceEditForm(
             instance=self.sentence
         )
+        pending_suggestions = self.sentence.suggestions.filter(
+            status=TranslationSuggestion.Status.PENDING
+        ).select_related("author", "author__profile").annotate(
+            vote_count=Count("votes")
+        ).order_by("-author__profile__average_quality_score", "-vote_count", "-created_at")
+        enrich_suggestion_author_stats(pending_suggestions)
+        context["pending_suggestions"] = pending_suggestions
         return context
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
+
+        # Поддержка действий над правками в детальном виде
+        if action in ("accept", "reject"):
+            suggestion_id = request.POST.get("suggestion_id")
+            suggestion = get_object_or_404(TranslationSuggestion, pk=suggestion_id, sentence=self.sentence)
+            note = request.POST.get("editor_note", "").strip()
+            edited_text = request.POST.get("edited_text", "").strip()
+            
+            try:
+                review_translation_suggestion(
+                    suggestion_id=suggestion.pk,
+                    reviewer=request.user,
+                    action=action,
+                    note=note,
+                    edited_text=edited_text,
+                )
+            except TranslationWorkflowError as error:
+                messages.error(request, str(error))
+            else:
+                if action == "accept":
+                    messages.success(request, "Правка принята.")
+                else:
+                    messages.success(request, "Правка отклонена.")
+            return redirect("editor-sentence-detail", pk=self.sentence.pk)
 
         if action == "save_sentence":
             sentence_form = SentenceEditForm(request.POST, instance=self.sentence)

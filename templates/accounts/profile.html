@@ -1,20 +1,40 @@
 {% extends "base.html" %}
+{% load diff_tags %}
 
-{% block title %}Профиль — {{ request.user.username }}{% endblock %}
+{% block title %}
+  Профиль — 
+  {% if profile.display_name %}
+    {{ profile.display_name }}
+  {% elif is_own_profile %}
+    {{ request.user.username }}
+  {% else %}
+    Участник #{{ target_user.id }}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<div class="profile-shell">
-  <section class="section-head">
+<div class="profile-shell" style="padding-bottom: 3rem;">
+  <section class="section-head" style="margin-bottom: 2rem;">
     <div>
-      <p class="eyebrow">Личный кабинет</p>
-      <h1>{{ profile.display_name|default:request.user.username }}</h1>
+      <p class="eyebrow">{% if is_own_profile %}Личный кабинет{% else %}Профиль пользователя{% endif %}</p>
+      <h1 style="margin: 0.5rem 0;">
+        {% if profile.display_name %}
+          {{ profile.display_name }}
+        {% elif is_own_profile %}
+          {{ request.user.username }}
+        {% else %}
+          Участник #{{ target_user.id }}
+        {% endif %}
+      </h1>
     </div>
-    {% if request.user.is_staff or profile.is_editor %}
-      <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+    {% if is_own_profile %}
+      {% if request.user.is_staff or profile.is_editor %}
+        <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+      {% endif %}
     {% endif %}
   </section>
 
-  <div class="stats-grid">
+  <div class="stats-grid" style="margin-bottom: 2.5rem; gap: 1.25rem;">
     <div class="stat-card">
       <span>{{ total_points }}</span>
       <p>всего очков</p>
@@ -31,29 +51,46 @@
       <span>{{ accepted_suggestions_count }}</span>
       <p>принято правок</p>
     </div>
+    {% if profile.accepted_suggestions_count > 0 %}
+    <div class="stat-card" style="border-top: 4px solid {% if profile.average_quality_score > 0.8 %}#1a7f37{% elif profile.average_quality_score > 0.5 %}#9a6700{% else %}#cf222e{% endif %};">
+      <span>{{ profile.quality_percentage }}%</span>
+      <p>индекс доверия</p>
+    </div>
+    {% endif %}
   </div>
 
-  <section class="panel" style="margin-bottom: 1.5rem;">
-    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Никнейм</h2>
-    <form method="post" style="display: grid; gap: 1rem;">
-      {% csrf_token %}
-      <div>
-        {{ profile_form.display_name.label_tag }}
-        {{ profile_form.display_name }}
-        {% if profile_form.display_name.help_text %}
-          <p style="margin: 0.4rem 0 0; color: var(--muted); font-size: 0.85rem;">{{ profile_form.display_name.help_text }}</p>
-        {% endif %}
-        {% for error in profile_form.display_name.errors %}
-          <p style="margin: 0.4rem 0 0; color: var(--danger); font-size: 0.85rem;">{{ error }}</p>
+  <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Активность</h2>
+    
+    <div class="streak-badges" style="margin-bottom: 2rem;">
+      <div class="streak-card">
+        <span>{{ current_streak }}</span>
+        <p>Текущий стрик (дней)</p>
+      </div>
+      <div class="streak-card">
+        <span>{{ max_streak }}</span>
+        <p>Макс. стрик</p>
+      </div>
+    </div>
+
+    <div class="activity-heatmap" style="background: var(--bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--line);">
+      <div class="heatmap-container">
+        {% for day in activity_grid %}
+          <div class="heatmap-day level-{% if day.count == 0 %}0{% elif day.count < 3 %}1{% elif day.count < 6 %}2{% elif day.count < 10 %}3{% else %}4{% endif %}" 
+               data-tooltip="{{ day.date }}: {{ day.count }} действий"></div>
         {% endfor %}
       </div>
-      <div>
-        <button type="submit">Сохранить никнейм</button>
-      </div>
-    </form>
+      <p style="margin-top: 1rem; font-size: 0.7rem; color: var(--muted); text-align: right; opacity: 0.8;">
+        Меньше <span style="display:inline-block; width:10px; height:10px; background:#ebedf0; border-radius: 2px;"></span> 
+        <span style="display:inline-block; width:10px; height:10px; background:#9be9a8; border-radius: 2px;"></span> 
+        <span style="display:inline-block; width:10px; height:10px; background:#40c463; border-radius: 2px;"></span> 
+        <span style="display:inline-block; width:10px; height:10px; background:#30a14e; border-radius: 2px;"></span> 
+        <span style="display:inline-block; width:10px; height:10px; background:#216e39; border-radius: 2px;"></span> Больше
+      </p>
+    </div>
   </section>
 
-  <section class="panel" style="margin-bottom: 1.5rem;">
+  <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Достижения</h2>
     <div class="achievement-grid">
       {% for ua in achievements %}
@@ -68,7 +105,90 @@
     </div>
   </section>
 
-  <section class="panel">
+  {% if is_own_profile %}
+    <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+      <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.2rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Настройки профиля</h2>
+      <form method="post" style="display: grid; gap: 1rem; max-width: 400px;">
+        {% csrf_token %}
+        <div>
+          <label style="font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Ваш никнейм на сайте</label>
+          {{ profile_form.display_name }}
+          {% if profile_form.display_name.help_text %}
+            <p style="margin: 0.4rem 0 0; color: var(--muted); font-size: 0.8rem;">{{ profile_form.display_name.help_text }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <button type="submit" class="button" style="width: auto; padding: 0.6rem 1.5rem;">Сохранить изменения</button>
+        </div>
+      </form>
+    </section>
+  {% endif %}
+
+  {% if is_own_profile and pending_suggestions %}
+    <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+      <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; color: var(--warning);">Мои переводы на проверке ({{ pending_suggestions|length }})</h2>
+      <div class="profile-suggestions">
+        {% for suggestion in pending_suggestions %}
+          <div class="profile-suggestion-card" style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line);">
+            <p class="subtle" style="font-size: 0.75rem; font-weight: 800; margin-bottom: 0.75rem;">ПРЕДЛОЖЕНИЕ #{{ suggestion.sentence.id }} — {{ suggestion.created_at|date:"d.m.Y H:i" }}</p>
+            <p style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem;">{{ suggestion.sentence.source_text_ru }}</p>
+            
+            <form method="post" action="{% url 'sentence-list' %}" class="stack">
+              {% csrf_token %}
+              <input type="hidden" name="sentence_id" value="{{ suggestion.sentence.id }}">
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex-grow: 1; min-width: 280px;">
+                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--muted); font-weight: 700;">Ваш вариант (можно отредактировать):</label>
+                  <textarea name="text_av" rows="2" style="font-size: 1rem; font-weight: 600; border: 2px solid var(--accent); border-radius: 8px; width: 100%; padding: 0.75rem;" placeholder="Введите перевод...">{{ suggestion.proposed_text_av }}</textarea>
+                </div>
+                <button type="submit" class="button" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; height: 52px;">Сохранить</button>
+              </div>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  {% endif %}
+
+  <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
+    <details {% if not is_own_profile %}open{% endif %} class="profile-details-list">
+      <summary style="cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;">
+        <h2 style="margin: 0; font-size: 1.4rem;">
+          {% if is_own_profile %}Принятые переводы и исправления редактора{% else %}Принятые переводы пользователя{% endif %}
+          <span style="font-size: 0.9rem; color: var(--muted); margin-left: 0.5rem; font-weight: normal;">({{ accepted_suggestions|length }})</span>
+        </h2>
+        <span class="button ghost small" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Нажмите, чтобы {% if not is_own_profile %}свернуть{% else %}развернуть{% endif %}</span>
+      </summary>
+      
+      <div class="profile-accepted-list" style="margin-top: 2rem; display: grid; gap: 1.5rem;">
+        {% for suggestion in accepted_suggestions %}
+          <div class="profile-accepted-card" style="padding: 1.25rem; background: var(--bg); border-radius: 12px; border: 1px solid var(--line);">
+            <p class="subtle" style="font-size: 0.7rem; font-weight: 800; margin-bottom: 0.5rem; opacity: 0.7;">#{{ suggestion.sentence.id }} — {{ suggestion.reviewed_at|date:"d.m.Y" }}</p>
+            <p style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1rem; line-height: 1.4;">{{ suggestion.sentence.source_text_ru }}</p>
+            
+            <div style="background: var(--paper); padding: 1rem; border-radius: 8px; font-size: 1.1rem; line-height: 1.4; border: 1px solid var(--line);">
+              {% if is_own_profile %}
+                {{ suggestion.original_text_av|highlight_diff:suggestion.proposed_text_av }}
+              {% else %}
+                {{ suggestion.proposed_text_av }}
+              {% endif %}
+            </div>
+            
+            {% if suggestion.editor_note and is_own_profile %}
+              <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--muted); padding-left: 1rem; border-left: 3px solid var(--accent);">
+                <strong>Комментарий редактора:</strong> {{ suggestion.editor_note }}
+              </p>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p class="empty-state" style="padding: 2rem 0;">Пока нет принятых переводов.</p>
+        {% endfor %}
+      </div>
+    </details>
+  </section>
+
+  <section class="panel" style="padding: 1.5rem;">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Информация об аккаунте</h2>
     <div class="info-rows">
       {% if profile.district %}
@@ -88,18 +208,20 @@
       {% endif %}
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Никнейм</span>
-        <span class="info-value">{{ profile.display_name|default:request.user.username }}</span>
+        <span class="info-value">{{ profile.display_name|default:target_user.username|default:request.user.username }}</span>
       </div>
+      {% if is_own_profile %}
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Логин</span>
         <span class="info-value">{{ request.user.username }}</span>
       </div>
+      {% endif %}
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Роль</span>
         <span class="badge {% if profile.is_editor %}done{% endif %} info-value">
-          {% if request.user.is_superuser %}
+          {% if target_user.is_superuser or request.user.is_superuser and is_own_profile %}
             Администратор
-          {% elif request.user.is_staff or profile.role == 'editor' %}
+          {% elif target_user.is_staff or profile.role == 'editor' %}
             Редактор
           {% else %}
             Переводчик
@@ -108,7 +230,13 @@
       </div>
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Дата регистрации</span>
-        <span class="info-value">{{ request.user.date_joined|date:"d.m.Y" }}</span>
+        <span class="info-value">
+          {% if is_own_profile %}
+            {{ request.user.date_joined|date:"d.m.Y" }}
+          {% else %}
+            {{ target_user.date_joined|date:"d.m.Y" }}
+          {% endif %}
+        </span>
       </div>
     </div>
   </section>

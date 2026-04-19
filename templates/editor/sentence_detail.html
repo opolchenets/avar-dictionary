@@ -7,12 +7,15 @@
   <div>
     <p class="eyebrow">Editor</p>
     <h1>Предложение #{{ sentence.id }}</h1>
+    <div style="margin-top: 1rem;">
+        <a href="{% url 'editor-sentences' %}" class="button ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">&larr; К списку предложений</a>
+    </div>
   </div>
 </section>
 
 <section class="detail-grid">
   <article class="panel" style="grid-column: 1 / -1;">
-    <h2 class="panel-title">Редактировать предложение и перевод</h2>
+    <h2 class="panel-title">Редактировать предложение и основной перевод</h2>
     <form method="post" class="stack">
       {% csrf_token %}
       {{ sentence_form.as_p }}
@@ -24,13 +27,50 @@
       </div>
     </form>
   </article>
+
+  {% if pending_suggestions %}
+  <article class="panel" style="grid-column: 1 / -1; border-top: 4px solid var(--accent);">
+    <h2 class="panel-title">Ожидающие правки ({{ pending_suggestions.count }})</h2>
+    <div style="display: grid; gap: 1.5rem; margin-top: 1.5rem;">
+      {% for suggestion in pending_suggestions %}
+        <div style="padding: 1.5rem; background: var(--bg); border-radius: 15px; border: 1px solid var(--line);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <div>
+              <span style="font-weight: 800; color: var(--ink);">{{ suggestion.author_display_name }}</span>
+              {% if suggestion.author_accepted_suggestions_count > 0 %}
+                  <span class="badge" title="Доверие к этому автору"
+                        style="font-size: 0.7rem; background: {% if suggestion.author_quality_score > 0.8 %}#e6ffed; color: #1a7f37; border: 1px solid #1a7f37;{% elif suggestion.author_quality_score > 0.5 %}#fff8c5; color: #9a6700; border: 1px solid #9a6700;{% else %}#ffebe9; color: #cf222e; border: 1px solid #cf222e;{% endif %}">
+                      {{ suggestion.author_quality_percentage }}%
+                  </span>
+              {% endif %}
+              <span style="color: var(--muted); font-size: 0.8rem; margin-left: 0.5rem;">{{ suggestion.created_at|date:"d.m.Y H:i" }}</span>
+            </div>
+            <span class="badge" style="background: var(--paper); color: var(--ink); border: 1px solid var(--line);">Голосов: {{ suggestion.vote_count }}</span>
+          </div>
+
+          <form method="post" class="stack">
+            {% csrf_token %}
+            <input type="hidden" name="suggestion_id" value="{{ suggestion.id }}">
+            <div style="margin-bottom: 1rem;">
+              <textarea name="edited_text" rows="2" style="font-weight: 600; font-size: 1.1rem; background: var(--paper);">{{ suggestion.proposed_text_av }}</textarea>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+              <button type="submit" class="button" name="action" value="accept" style="flex: 2;">Принять как основной перевод</button>
+              <button type="submit" class="button danger" name="action" value="reject" style="flex: 1;">Отклонить</button>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+  {% endif %}
 </section>
 
-<section class="panel narrow">
-  <h2>Удаление предложения</h2>
+<section class="panel narrow" style="margin-top: 2rem; opacity: 0.7;">
+  <h2 style="font-size: 1rem; margin-bottom: 1rem;">Опасная зона</h2>
   <form method="post">
     {% csrf_token %}
-    <button type="submit" class="button danger" name="action" value="delete_sentence">Удалить предложение полностью</button>
+    <button type="submit" class="button danger" name="action" value="delete_sentence" onclick="return confirm('Вы уверены, что хотите полностью удалить предложение и все его правки?')">Удалить предложение полностью</button>
   </form>
 </section>
 {% endblock %}

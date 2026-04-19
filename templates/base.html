@@ -17,6 +17,30 @@
         <a href="{% url 'sentence-list' %}">Предложения</a>
         <a href="{% url 'leaderboard' %}">Лидерборд</a>
         {% if request.user.is_authenticated %}
+          <div class="notification-wrapper">
+            <button class="notification-bell" id="notificationBell" title="Уведомления">
+              <i class="fa-solid fa-bell"></i>
+              {% if unread_notifications_count > 0 %}
+                <span class="notification-badge" id="notificationBadge">{{ unread_notifications_count }}</span>
+              {% endif %}
+            </button>
+            <div class="notification-dropdown" id="notificationDropdown">
+              <div class="notification-header">Уведомления</div>
+              <div class="notification-list">
+                {% for notif in latest_notifications %}
+                  <div class="notification-item {% if not notif.is_read %}unread{% endif %}">
+                    <span class="status {{ notif.suggestion.status }}">
+                      {% if notif.suggestion.status == 'accepted' %}Принято{% else %}Отклонено{% endif %}
+                    </span>
+                    Ваша правка для: <strong>«{{ notif.suggestion.sentence.source_text_ru|truncatechars:50 }}»</strong> была {{ notif.suggestion.get_status_display|lower }}.
+                    <span class="date">{{ notif.created_at|date:"d.m.Y H:i" }}</span>
+                  </div>
+                {% empty %}
+                  <div class="notification-item" style="text-align: center; color: var(--muted);">Нет новых уведомлений</div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
           <span class="badge">Очки: {{ user_total_points }}</span>
           <a href="{% url 'profile' %}">Профиль</a>
           {% if request.user.profile.is_editor or request.user.is_staff %}
@@ -106,6 +130,41 @@
         }
       }
     });
+
+    // Notification Dropdown Toggle & Mark as Read
+    (function() {
+      const bell = document.getElementById('notificationBell');
+      const dropdown = document.getElementById('notificationDropdown');
+      const badge = document.getElementById('notificationBadge');
+
+      if (bell && dropdown) {
+        bell.addEventListener('click', function(e) {
+          e.stopPropagation();
+          const isOpen = dropdown.classList.toggle('is-open');
+          
+          if (isOpen && badge) {
+            // Mark as read via AJAX
+            fetch('{% url "notification-mark-read" %}', {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+              }
+            }).then(response => {
+              if (response.ok) {
+                badge.style.display = 'none';
+              }
+            });
+          }
+        });
+
+        document.addEventListener('click', function(e) {
+          if (!dropdown.contains(e.target) && e.target !== bell) {
+            dropdown.classList.remove('is-open');
+          }
+        });
+      }
+    })();
   </script>
   {% block extra_js %}{% endblock %}
 </body>

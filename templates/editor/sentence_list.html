@@ -79,7 +79,7 @@
             <div class="editor-meta">
               <span>Создано: <strong>{{ sentence.created_at|date:"d.m.Y H:i" }}</strong></span>
               {% if sentence.translated_by %}
-                <span>Переводчик: <strong>{{ sentence.translated_by.username }}</strong></span>
+                <span>Переводчик: <strong>{{ sentence.translated_by.profile.display_name|default:sentence.translated_by.username }}</strong></span>
               {% endif %}
             </div>
             

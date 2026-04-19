@@ -24,17 +24,28 @@
   </article>
 
   <article class="panel">
-    <h2 class="panel-title">{% if sentence.text_av %}Предложить вариант{% else %}Предложить перевод{% endif %}</h2>
-    {% if request.user.is_authenticated %}
-      <form method="post" class="stack">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="button">
-          {% if sentence.text_av %}Предложить вариант{% else %}Отправить перевод{% endif %}
-        </button>
-      </form>
+    {% if sentence.status != 'translated' %}
+      <h2 class="panel-title">{% if sentence.text_av %}Предложить вариант{% else %}Предложить перевод{% endif %}</h2>
+      {% if request.user.is_authenticated %}
+        <form method="post" class="stack">
+          {% csrf_token %}
+          {% if user_suggestion %}
+              <p style="font-size: 0.75rem; color: var(--accent); font-weight: 800; letter-spacing: 0.05em; margin-bottom: -0.5rem; text-transform: uppercase;">Ваш текущий вариант (можно исправить):</p>
+          {% endif %}
+          {{ form.as_p }}
+          <button type="submit" class="button">
+            {% if user_suggestion %}Обновить мой вариант{% else %}Отправить перевод{% endif %}
+          </button>
+        </form>
+      {% else %}
+        <p class="empty-state">Чтобы переводить и предлагать правки, нужно <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent); font-weight: 700;">войти</a>.</p>
+      {% endif %}
     {% else %}
-      <p class="empty-state">Чтобы переводить и предлагать правки, нужно <a href="{% url 'login' %}?next={{ request.path }}" style="color: var(--accent); font-weight: 700;">войти</a>.</p>
+      <div style="text-align: center; padding: 2rem 1rem;">
+        <span style="font-size: 3rem; display: block; margin-bottom: 1rem;">✅</span>
+        <h2 style="margin: 0 0 0.5rem; color: var(--success);">Переведено</h2>
+        <p style="color: var(--muted); font-size: 0.9rem; margin: 0;">Это предложение уже имеет утвержденный перевод и закрыто для новых правок.</p>
+      </div>
     {% endif %}
   </article>
 </section>

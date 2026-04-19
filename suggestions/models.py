@@ -15,7 +15,11 @@ class TranslationSuggestion(models.Model):
         on_delete=models.CASCADE,
         related_name="suggestions",
     )
+    # Текст, который может редактировать редактор
     proposed_text_av = models.TextField("Предлагаемый перевод")
+    # Исходный текст от пользователя (для расчета рейтинга)
+    original_text_av = models.TextField("Исходный текст пользователя", blank=True)
+    
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -27,6 +31,9 @@ class TranslationSuggestion(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
     )
+    # Оценка схожести (от 0 до 1)
+    similarity_score = models.FloatField("Индекс точности", null=True, blank=True)
+    
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,

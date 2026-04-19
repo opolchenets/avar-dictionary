@@ -110,6 +110,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "gamification.context_processors.user_points",
+                "accounts.context_processors.user_notifications",
             ],
         },
     },

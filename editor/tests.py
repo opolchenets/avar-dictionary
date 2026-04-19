@@ -41,7 +41,7 @@ class EditorFlowTests(TestCase):
 
         self.assertRedirects(response, reverse("editor-suggestions"))
         self.sentence.refresh_from_db()
-        self.assertEqual(self.sentence.text_av, "ЦIияб тIехь")
+        self.assertEqual(self.sentence.text_av, "ЦӀияб тӀехь.")
         self.assertEqual(
             PointLedger.objects.filter(
                 user=self.user,
@@ -49,6 +49,26 @@ class EditorFlowTests(TestCase):
             ).count(),
             1,
         )
+        self.user.profile.refresh_from_db()
+        self.assertGreater(self.user.profile.average_quality_score, 0)
+        self.assertEqual(self.user.profile.accepted_suggestions_count, 1)
+
+    def test_accept_suggestion_recreates_missing_author_profile(self):
+        self.client.login(username="editor", password="Strong-pass123")
+        self.user.profile.delete()
+
+        response = self.client.post(
+            reverse("editor-suggestions"),
+            {
+                "id": self.suggestion.id,
+                "action": "accept",
+            },
+        )
+
+        self.assertRedirects(response, reverse("editor-suggestions"))
+        self.user.refresh_from_db()
+        self.assertTrue(hasattr(self.user, "profile"))
+        self.assertEqual(self.user.profile.accepted_suggestions_count, 1)
 
     def test_reject_last_pending_suggestion_returns_sentence_to_untranslated(self):
         self.client.login(username="editor", password="Strong-pass123")
@@ -97,11 +117,12 @@ class EditorFlowTests(TestCase):
             reverse("editor-import"),
             {
                 "sentences": "Книга\nПривет\nПривет\nПока",
+                "csv_format": "1col",
             },
         )
 
         self.assertRedirects(response, reverse("editor-import"))
         self.assertEqual(
-            Sentence.objects.filter(source_text_ru__in=["Привет", "Пока"]).count(),
+            Sentence.objects.filter(source_text_ru__in=["Привет.", "Пока."]).count(),
             2,
         )

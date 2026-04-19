@@ -33,7 +33,17 @@
             {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}#{{ forloop.counter }}{% endif %}
           </span>
           <div class="leaderboard-meta">
-            <strong style="font-size: 1.1rem;">{{ leader.profile.display_name|default:leader.username }}</strong>
+            <a href="{% url 'public-profile' leader.pk %}" style="text-decoration: none; color: var(--ink);">
+              <strong style="font-size: 1.1rem; border-bottom: 2px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='transparent'">
+                {{ leader.profile.display_name|default:leader.username }}
+              </strong>
+            </a>
+            {% if leader.profile.accepted_suggestions_count > 0 %}
+                <span class="badge" title="Индекс доверия" 
+                      style="font-size: 0.65rem; padding: 0.1rem 0.3rem; background: {% if leader.profile.average_quality_score > 0.8 %}#e6ffed; color: #1a7f37; border: 1px solid #1a7f37;{% elif leader.profile.average_quality_score > 0.5 %}#fff8c5; color: #9a6700; border: 1px solid #9a6700;{% else %}#ffebe9; color: #cf222e; border: 1px solid #cf222e;{% endif %}">
+                    {{ leader.profile.quality_percentage }}%
+                </span>
+            {% endif %}
             {% if leader.profile.district %}
               <span style="font-size: 0.85rem; color: var(--muted);">
                 {{ leader.profile.district.name }} / <span style="color: {{ leader.profile.district.alliance.color }}">{{ leader.profile.district.alliance.name }}</span>
