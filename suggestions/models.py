@@ -10,6 +10,10 @@ class TranslationSuggestion(models.Model):
         ACCEPTED = "accepted", "Принято"
         REJECTED = "rejected", "Отклонено"
 
+    class ReviewerRole(models.TextChoices):
+        EDITOR = "editor", "Редактор"
+        CO_EDITOR = "co_editor", "Соредактор"
+
     sentence = models.ForeignKey(
         Sentence,
         on_delete=models.CASCADE,
@@ -42,6 +46,13 @@ class TranslationSuggestion(models.Model):
         blank=True,
     )
     reviewed_at = models.DateTimeField("Проверено", null=True, blank=True)
+    reviewer_role = models.CharField(
+        "Роль проверяющего",
+        max_length=20,
+        choices=ReviewerRole.choices,
+        blank=True,
+        default="",
+    )
     editor_note = models.TextField("Комментарий редактора", blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
 

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Кабинет Соредактора{% endblock %}
+
+{% block content %}
+<div class="page-narrow" style="max-width: 900px; margin: 2rem auto;">
+  <div class="action-row action-row--between" style="margin-bottom: 2rem; border-bottom: 2px solid var(--line); padding-bottom: 1rem;">
+    <div>
+      <p style="color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.85rem; margin: 0 0 0.5rem;">Avar Corpus</p>
+      <h1 style="margin: 0; font-size: 2.2rem; color: var(--ink);">Кабинет Соредактора</h1>
+    </div>
+  </div>
+
+  <div style="background:rgba(100,120,200,0.08);border:1px solid #6478c8;border-radius:12px;padding:1rem 1.5rem;margin-bottom:2rem;font-size:0.9rem;color:#3a4a90;">
+    Вы работаете как <strong>Соредактор</strong>. Вы можете принимать и отклонять правки переводчиков, редактировать предложенный текст перед принятием. Вы не можете принимать собственные правки и редактировать оригинальные предложения.
+  </div>
+
+  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem;">
+    <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 1.5rem; box-shadow: var(--shadow);">
+      <span style="display: block; font-size: 2.5rem; font-weight: 700; color: var(--ink); line-height: 1;">{{ pending_count }}</span>
+      <p style="color: var(--muted); font-size: 0.9rem; margin: 0.5rem 0 0;">правок ожидает проверки</p>
+    </div>
+  </section>
+
+  <section>
+    <h2 style="font-size: 1.3rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); padding-bottom: 0.5rem;">Доступные действия</h2>
+    <div class="editor-tools-grid">
+      <a href="{% url 'editor-suggestions' %}" class="editor-tool-link" onmouseover="this.style.boxShadow='var(--shadow)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+        <h3 style="margin: 0 0 0.4rem; color: var(--ink); font-size: 1.15rem;">Очередь правок</h3>
+        <p style="margin: 0; color: var(--muted); font-size: 0.95rem; line-height: 1.4;">Принять или отклонить предложенные переводчиками правки.</p>
+      </a>
+    </div>
+  </section>
+</div>
+{% endblock %}

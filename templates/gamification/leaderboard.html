@@ -39,10 +39,13 @@
               </strong>
             </a>
             {% if leader.profile.accepted_suggestions_count > 0 %}
-                <span class="badge" title="Индекс доверия" 
+                <span class="badge" title="Индекс доверия"
                       style="font-size: 0.65rem; padding: 0.1rem 0.3rem; background: {% if leader.profile.average_quality_score > 0.8 %}#e6ffed; color: #1a7f37; border: 1px solid #1a7f37;{% elif leader.profile.average_quality_score > 0.5 %}#fff8c5; color: #9a6700; border: 1px solid #9a6700;{% else %}#ffebe9; color: #cf222e; border: 1px solid #cf222e;{% endif %}">
                     {{ leader.profile.quality_percentage }}%
                 </span>
+            {% endif %}
+            {% if leader.profile.role == 'co_editor' %}
+              <span class="badge co-editor" style="font-size:0.6rem;padding:0.1rem 0.4rem;">#Соредактор</span>
             {% endif %}
             {% if leader.profile.district %}
               <span style="font-size: 0.85rem; color: var(--muted);">

@@ -27,11 +27,18 @@
         {% endif %}
       </h1>
     </div>
-    {% if is_own_profile %}
-      {% if request.user.is_staff or profile.is_editor %}
-        <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+      {% if profile.is_co_editor %}
+        <span class="badge co-editor" style="font-size:0.75rem;padding:0.3rem 0.7rem;border-radius:0 14px 0 14px;">#Соредактор</span>
       {% endif %}
-    {% endif %}
+      {% if is_own_profile %}
+        {% if request.user.is_staff or profile.is_editor %}
+          <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+        {% elif profile.is_co_editor %}
+          <a href="{% url 'co-editor-dashboard' %}" class="button ghost">Панель соредактора</a>
+        {% endif %}
+      {% endif %}
+    </div>
   </section>
 
   <div class="stats-grid" style="margin-bottom: 2.5rem; gap: 1.25rem;">
@@ -218,13 +225,15 @@
       {% endif %}
       <div class="info-row">
         <span style="color: var(--muted); font-weight: 600;">Роль</span>
-        <span class="badge {% if profile.is_editor %}done{% endif %} info-value">
-          {% if target_user.is_superuser or request.user.is_superuser and is_own_profile %}
-            Администратор
+        <span class="info-value">
+          {% if target_user.is_superuser %}
+            <span class="badge done">Администратор</span>
           {% elif target_user.is_staff or profile.role == 'editor' %}
-            Редактор
+            <span class="badge done">Редактор</span>
+          {% elif profile.role == 'co_editor' %}
+            <span class="badge co-editor">Соредактор</span>
           {% else %}
-            Переводчик
+            <span class="badge">Переводчик</span>
           {% endif %}
         </span>
       </div>

@@ -14,6 +14,7 @@
 </section>
 
 <section class="detail-grid">
+  {% if user_is_full_editor %}
   <article class="panel" style="grid-column: 1 / -1;">
     <h2 class="panel-title">Редактировать предложение и основной перевод</h2>
     <form method="post" class="stack">
@@ -27,6 +28,7 @@
       </div>
     </form>
   </article>
+  {% endif %}
 
   {% if pending_suggestions %}
   <article class="panel" style="grid-column: 1 / -1; border-top: 4px solid var(--accent);">
@@ -66,6 +68,7 @@
   {% endif %}
 </section>
 
+{% if user_is_full_editor %}
 <section class="panel narrow" style="margin-top: 2rem; opacity: 0.7;">
   <h2 style="font-size: 1rem; margin-bottom: 1rem;">Опасная зона</h2>
   <form method="post">
@@ -73,4 +76,5 @@
     <button type="submit" class="button danger" name="action" value="delete_sentence" onclick="return confirm('Вы уверены, что хотите полностью удалить предложение и все его правки?')">Удалить предложение полностью</button>
   </form>
 </section>
+{% endif %}
 {% endblock %}

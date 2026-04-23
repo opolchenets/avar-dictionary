@@ -36,6 +36,7 @@ class District(models.Model):
 class UserProfile(models.Model):
     class Role(models.TextChoices):
         CONTRIBUTOR = "contributor", "Переводчик"
+        CO_EDITOR = "co_editor", "Соредактор"
         EDITOR = "editor", "Редактор"
 
     user = models.OneToOneField(
@@ -73,6 +74,10 @@ class UserProfile(models.Model):
     @property
     def is_editor(self) -> bool:
         return self.role == self.Role.EDITOR or self.user.is_staff or self.user.is_superuser
+
+    @property
+    def is_co_editor(self) -> bool:
+        return self.role == self.Role.CO_EDITOR
     
     @property
     def quality_percentage(self) -> int:

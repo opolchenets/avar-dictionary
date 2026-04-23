@@ -1,6 +1,9 @@
 from django.urls import path
 
 from .views import (
+    CoEditorAcceptedView,
+    CoEditorDashboardView,
+    CoEditorManageView,
     CorpusExportView,
     EditorDashboardView,
     EditorSentenceDetailView,
@@ -14,6 +17,9 @@ from .views import (
 
 urlpatterns = [
     path("", EditorDashboardView.as_view(), name="editor-dashboard"),
+    path("co-editor/", CoEditorDashboardView.as_view(), name="co-editor-dashboard"),
+    path("co-editor/accepted/", CoEditorAcceptedView.as_view(), name="editor-co-editor-accepted"),
+    path("co-editor/manage/", CoEditorManageView.as_view(), name="editor-co-editor-manage"),
     path("import/", SentenceImportView.as_view(), name="editor-import"),
     path("suggestions/", SuggestionQueueView.as_view(), name="editor-suggestions"),
     path("sentences/", EditorSentenceListView.as_view(), name="editor-sentences"),

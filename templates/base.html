@@ -45,6 +45,8 @@
           <a href="{% url 'profile' %}">Профиль</a>
           {% if request.user.profile.is_editor or request.user.is_staff %}
             <a href="{% url 'editor-dashboard' %}">Редактор</a>
+          {% elif request.user.profile.is_co_editor %}
+            <a href="{% url 'co-editor-dashboard' %}">Соредактор</a>
           {% endif %}
           <form method="post" action="{% url 'logout' %}" class="inline-form">
             {% csrf_token %}

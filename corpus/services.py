@@ -151,6 +151,17 @@ def review_translation_suggestion(
     if suggestion.status != TranslationSuggestion.Status.PENDING:
         raise TranslationWorkflowError("Эта правка уже обработана.")
 
+    from accounts.models import UserProfile
+    reviewer_profile = getattr(reviewer, "profile", None)
+    is_co_editor_reviewer = (
+        reviewer_profile is not None
+        and reviewer_profile.role == UserProfile.Role.CO_EDITOR
+    )
+    if is_co_editor_reviewer and suggestion.author == reviewer:
+        raise TranslationWorkflowError(
+            "Соредактор не может принять или отклонить собственную правку."
+        )
+
     # Запоминаем оригинал
     user_original_version = (suggestion.original_text_av or suggestion.proposed_text_av or "").strip()
 
@@ -161,8 +172,22 @@ def review_translation_suggestion(
     suggestion.reviewed_by = reviewer
     suggestion.reviewed_at = timezone.now()
     suggestion.editor_note = note
+    suggestion.reviewer_role = (
+        TranslationSuggestion.ReviewerRole.CO_EDITOR
+        if is_co_editor_reviewer
+        else TranslationSuggestion.ReviewerRole.EDITOR
+    )
 
     if action == "accept":
+        if is_co_editor_reviewer:
+            admin_accepted = suggestion.sentence.suggestions.filter(
+                status=TranslationSuggestion.Status.ACCEPTED
+            ).exclude(reviewer_role=TranslationSuggestion.ReviewerRole.CO_EDITOR).first()
+            if admin_accepted is not None:
+                raise TranslationWorkflowError(
+                    "Нельзя изменить перевод, принятый администратором."
+                )
+
         # РАСЧЕТ КАЧЕСТВА
         matcher = difflib.SequenceMatcher(None, user_original_version, final_text_to_approve)
         score = matcher.ratio()

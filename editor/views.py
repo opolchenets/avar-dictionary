@@ -7,11 +7,18 @@ from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.views.generic import DeleteView, FormView, ListView, TemplateView
 
-from accounts.permissions import EditorRequiredMixin
+from accounts.permissions import (
+    CoEditorRequiredMixin,
+    EditorRequiredMixin,
+    user_is_co_editor,
+    user_is_editor,
+)
+from accounts.models import UserProfile
 from corpus.forms import SentenceFilterForm
 from corpus.models import Category, Sentence, Terminology
 from corpus.services import (
     TranslationWorkflowError,
+    normalize_avar_text,
     review_translation_suggestion,
     set_sentence_translation,
 )
@@ -122,6 +129,8 @@ class EditorDashboardView(EditorRequiredMixin, TemplateView):
     template_name = "editor/dashboard.html"
 
     def handle_no_permission(self):
+        if user_is_co_editor(self.request.user):
+            return redirect("co-editor-dashboard")
         return redirect("home")
 
     def get_context_data(self, **kwargs):
@@ -282,7 +291,7 @@ class SentenceImportView(EditorRequiredMixin, FormView):
         return super().form_valid(form)
 
 
-class SuggestionQueueView(EditorRequiredMixin, ListView):
+class SuggestionQueueView(CoEditorRequiredMixin, ListView):
     model = Sentence
     template_name = "editor/suggestion_queue.html"
     context_object_name = "sentences"
@@ -319,11 +328,12 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         for sentence in context["sentences"]:
             enrich_suggestion_author_stats(sentence.pending_suggestions_list)
+        context["user_is_full_editor"] = user_is_editor(self.request.user)
         return context
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
-        
+
         if action in ("bulk_accept", "bulk_reject"):
             # Для массовых действий теперь принимаем список ID правок
             ids_str = request.POST.get("bulk_ids", "")
@@ -377,7 +387,7 @@ class SuggestionQueueView(EditorRequiredMixin, ListView):
         return redirect("editor-suggestions")
 
 
-class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
+class EditorSentenceDetailView(CoEditorRequiredMixin, TemplateView):
     template_name = "editor/sentence_detail.html"
 
     def handle_no_permission(self):
@@ -393,6 +403,7 @@ class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["sentence"] = self.sentence
+        context["user_is_full_editor"] = user_is_editor(self.request.user)
         context["sentence_form"] = kwargs.get("sentence_form") or SentenceEditForm(
             instance=self.sentence
         )
@@ -407,6 +418,11 @@ class EditorSentenceDetailView(EditorRequiredMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
+
+        if action in ("save_sentence", "delete_translation", "delete_sentence"):
+            if not user_is_editor(request.user):
+                messages.error(request, "Недостаточно прав.")
+                return redirect("editor-sentence-detail", pk=self.sentence.pk)
 
         # Поддержка действий над правками в детальном виде
         if action in ("accept", "reject"):
@@ -472,14 +488,94 @@ class CorpusExportView(EditorRequiredMixin, TemplateView):
         response["Content-Disposition"] = 'attachment; filename="approved_corpus.csv"'
 
         writer = csv.writer(response)
-        
+
         queryset = Sentence.objects.filter(status=Sentence.Status.TRANSLATED)
         category_slug = request.GET.get("category")
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
-            
+
         rows = queryset.order_by("id")
         for sentence in rows:
             writer.writerow([sentence.source_text_ru, sentence.text_av])
-            
+
         return response
+
+
+class CoEditorDashboardView(CoEditorRequiredMixin, TemplateView):
+    template_name = "editor/co_editor_dashboard.html"
+
+    def handle_no_permission(self):
+        return redirect("home")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["pending_count"] = TranslationSuggestion.objects.filter(
+            status=TranslationSuggestion.Status.PENDING
+        ).count()
+        return context
+
+
+class CoEditorAcceptedView(EditorRequiredMixin, ListView):
+    model = TranslationSuggestion
+    template_name = "editor/co_editor_accepted.html"
+    context_object_name = "suggestions"
+    paginate_by = 20
+
+    def handle_no_permission(self):
+        return redirect("home")
+
+    def get_queryset(self):
+        return TranslationSuggestion.objects.filter(
+            status=TranslationSuggestion.Status.ACCEPTED,
+            reviewer_role=TranslationSuggestion.ReviewerRole.CO_EDITOR,
+        ).select_related(
+            "sentence", "author", "author__profile",
+            "reviewed_by", "reviewed_by__profile",
+        ).order_by("-reviewed_at")
+
+    def post(self, request, *args, **kwargs):
+        suggestion = get_object_or_404(
+            TranslationSuggestion,
+            pk=request.POST.get("suggestion_id"),
+            reviewer_role=TranslationSuggestion.ReviewerRole.CO_EDITOR,
+            status=TranslationSuggestion.Status.ACCEPTED,
+        )
+        new_text = normalize_avar_text(request.POST.get("corrected_text", "").strip())
+        if new_text:
+            suggestion.proposed_text_av = new_text
+            suggestion.save(update_fields=["proposed_text_av"])
+            suggestion.sentence.text_av = new_text
+            suggestion.sentence.save(update_fields=["text_av"])
+            messages.success(request, "Перевод исправлен.")
+        return redirect("editor-co-editor-accepted")
+
+
+class CoEditorManageView(EditorRequiredMixin, TemplateView):
+    template_name = "editor/co_editor_manage.html"
+
+    def handle_no_permission(self):
+        return redirect("home")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["co_editors"] = UserProfile.objects.filter(
+            role=UserProfile.Role.CO_EDITOR
+        ).select_related("user")
+        context["contributors"] = UserProfile.objects.filter(
+            role=UserProfile.Role.CONTRIBUTOR
+        ).select_related("user").order_by("user__username")
+        return context
+
+    def post(self, request, *args, **kwargs):
+        target = get_object_or_404(UserProfile, user_id=request.POST.get("user_id"))
+        if target.is_editor:
+            messages.error(request, "Нельзя изменить роль редактора или администратора.")
+            return redirect("editor-co-editor-manage")
+        action = request.POST.get("action")
+        if action == "grant":
+            target.role = UserProfile.Role.CO_EDITOR
+        elif action == "revoke":
+            target.role = UserProfile.Role.CONTRIBUTOR
+        target.save(update_fields=["role"])
+        messages.success(request, f"Роль обновлена: {target}")
+        return redirect("editor-co-editor-manage")

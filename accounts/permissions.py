@@ -9,6 +9,21 @@ def user_is_editor(user) -> bool:
     return hasattr(user, "profile") and user.profile.is_editor
 
 
+def user_is_co_editor(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    return hasattr(user, "profile") and user.profile.is_co_editor
+
+
+def user_can_moderate(user) -> bool:
+    return user_is_editor(user) or user_is_co_editor(user)
+
+
 class EditorRequiredMixin(UserPassesTestMixin):
     def test_func(self):
         return user_is_editor(self.request.user)
+
+
+class CoEditorRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return user_can_moderate(self.request.user)

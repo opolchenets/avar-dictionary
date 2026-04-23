@@ -12,6 +12,12 @@
     </div>
   </section>
 
+  {% if not user_is_full_editor %}
+  <div class="panel" style="background:rgba(100,120,200,0.08);border:1px solid #6478c8;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;font-size:0.9rem;color:#3a4a90;">
+    Вы работаете как <strong>Соредактор</strong>. Нельзя принимать собственные правки и редактировать предложения базы.
+  </div>
+  {% endif %}
+
   <div class="bulk-bar">
     <span style="font-weight: 800; color: var(--muted); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Массовые действия</span>
     <div class="bulk-bar-actions">

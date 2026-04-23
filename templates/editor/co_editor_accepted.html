@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Работа соредакторов{% endblock %}
+
+{% block content %}
+<div class="page-narrow" style="max-width: 960px; margin: 2rem auto;">
+  <section class="section-head" style="margin-bottom: 2rem;">
+    <div>
+      <p class="eyebrow">Editor</p>
+      <h1>Работа соредакторов</h1>
+      <p style="color: var(--muted); font-size: 0.9rem;">Переводы, принятые соредакторами. Вы можете внести корректировку.</p>
+    </div>
+    <a href="{% url 'editor-dashboard' %}" class="button ghost">&larr; Назад</a>
+  </section>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% endif %}" style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 10px; background: {% if 'success' in message.tags %}rgba(40,167,69,0.12){% else %}rgba(220,53,69,0.12){% endif %}; color: {% if 'success' in message.tags %}var(--success){% else %}var(--danger){% endif %}; border: 1px solid {% if 'success' in message.tags %}var(--success){% else %}var(--danger){% endif %};">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {% if suggestions %}
+    <div style="display: grid; gap: 1.5rem;">
+      {% for suggestion in suggestions %}
+        <article class="panel" style="border-left: 4px solid #6478c8;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <span style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Предложение #{{ suggestion.sentence.id }}</span>
+              <p style="margin: 0.25rem 0 0; color: var(--ink); font-size: 0.95rem;">{{ suggestion.sentence.source_text_ru }}</p>
+            </div>
+            <div style="text-align: right; font-size: 0.8rem; color: var(--muted);">
+              <div>Принято: <strong>{{ suggestion.reviewed_at|date:"d.m.Y H:i" }}</strong></div>
+              <div>Соредактор: <strong>{{ suggestion.reviewed_by.profile.display_name|default:suggestion.reviewed_by.username }}</strong></div>
+              <div>Автор: <a href="{% url 'public-profile' suggestion.author.pk %}" style="color: var(--accent); text-decoration: none;">{{ suggestion.author.profile.display_name|default:suggestion.author.username }}</a></div>
+            </div>
+          </div>
+
+          <div style="background: var(--soft); border-radius: 10px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-weight: 600; font-size: 1.05rem; color: var(--ink);">
+            {{ suggestion.proposed_text_av }}
+          </div>
+
+          <form method="post" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="suggestion_id" value="{{ suggestion.id }}">
+            <div style="flex: 1; min-width: 240px;">
+              <label style="display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.3rem;">Корректировка (если нужна)</label>
+              <textarea name="corrected_text" rows="2" placeholder="Введите исправленный перевод..." style="width: 100%; box-sizing: border-box; background: var(--paper);">{{ suggestion.proposed_text_av }}</textarea>
+            </div>
+            <button type="submit" class="button" style="padding: 0.6rem 1.25rem;">Сохранить исправление</button>
+          </form>
+        </article>
+      {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+      <div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;">
+        {% if page_obj.has_previous %}
+          <a href="?page={{ page_obj.previous_page_number }}" class="button ghost" style="padding: 0.4rem 0.9rem;">← Назад</a>
+        {% endif %}
+        <span style="padding: 0.4rem 0.9rem; color: var(--muted); font-size: 0.9rem;">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}" class="button ghost" style="padding: 0.4rem 0.9rem;">Далее →</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div style="padding: 4rem 2rem; text-align: center;">
+      <p class="empty-state">Соредакторы ещё не принимали правки.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
