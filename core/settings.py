@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "suggestions",
     "gamification",
     "editor",
+    "clips",
 ]
 
 MIDDLEWARE = ["django.middleware.security.SecurityMiddleware"]

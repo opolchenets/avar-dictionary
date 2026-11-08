@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Фрагменты — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow">Рабочее пространство</p>
+      <h1>Аудиофрагменты</h1>
+    </div>
+    {% if request.user.is_staff or request.user.profile.is_editor %}
+      <a class="button ghost" href="{% url 'clip-review' %}">Спорные: {{ disputed }}</a>
+    {% endif %}
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="big-stat-value">{{ total }}</div><div class="big-stat-label">Всего фрагментов</div></div>
+    <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ done }}</div><div class="big-stat-label">Готово</div></div>
+    <div class="stat-card"><div class="big-stat-value">{{ left }}</div><div class="big-stat-label">Осталось</div></div>
+  </div>
+
+  <div class="panel">
+    <h2>Как это работает</h2>
+    <ol class="how-list">
+      <li>Слушаете короткий фрагмент аварской речи (2–7 секунд).</li>
+      <li>Под ним — черновик, который написала программа. Исправляете его <b>так, как сказал диктор</b>.</li>
+      <li>Каждый фрагмент независимо правят два человека. Совпало — фрагмент готов и оба получают очки. Разошлись — решает редактор.</li>
+    </ol>
+    <div class="action-row">
+      {% if request.user.is_authenticated %}
+        <a class="button" href="{% url 'clip-next' %}">Начать / следующий фрагмент →</a>
+      {% else %}
+        <a class="button" href="{% url 'login' %}?next={% url 'clip-next' %}">Войти и начать</a>
+        <a class="button ghost" href="{% url 'signup' %}">Регистрация</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if batches %}
+  <div class="panel">
+    <div class="panel-title"><h2 style="margin:0">Открытые пачки</h2></div>
+    {% for b in batches %}
+      <div class="info-row">
+        <span>{{ b.name }}{% if b.source %} <span class="mod-info-label">· {{ b.source }}</span>{% endif %}</span>
+        <span class="info-value">{{ b.d }} / {{ b.n }}</span>
+      </div>
+      <div class="progress"><span style="width:{% widthratio b.d b.n|default:1 100 %}%"></span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if request.user.is_authenticated %}
+  <div class="panel">
+    <div class="panel-title">
+      <h2 style="margin:0">Мои правки</h2>
+      <span class="badge">{{ my_edits }}</span>
+    </div>
+    {% if my_gold_n >= 5 and my_accuracy is not None %}
+      <p class="mod-info-label">Точность по проверочным фрагментам: <b>{% widthratio my_accuracy 1 100 %}%</b></p>
+    {% endif %}
+    {% for e in recent %}
+      <div class="info-row">
+        <a href="{% url 'clip-edit' e.clip.pk %}">#{{ e.clip.pk }} {{ e.text|truncatechars:70 }}</a>
+        {% if not e.clip.is_gold %}<span class="status {{ e.clip.status }}">{{ e.clip.get_status_display }}</span>{% endif %}
+      </div>
+    {% empty %}
+      <p class="empty-state">Пока нет правок.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

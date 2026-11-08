@@ -24,7 +24,7 @@
         <div class="leaderboard-head">
           <span>Ранг</span>
           <span>Участник</span>
-          <span style="text-align: right;">Переводы</span>
+          <span style="text-align: right;">Очки</span>
         </div>
       </div>
       {% for leader in user_leaders %}
@@ -57,7 +57,7 @@
         </div>
       {% empty %}
         <div style="padding: 4rem 2rem; text-align: center;">
-          <p class="empty-state">Рейтинг появится после первых принятых переводов.</p>
+          <p class="empty-state">Рейтинг появится после первых правок фрагментов.</p>
         </div>
       {% endfor %}
     </div>
@@ -70,7 +70,7 @@
         <div class="leaderboard-head">
           <span>Ранг</span>
           <span>Район</span>
-          <span style="text-align: right;">Переводы</span>
+          <span style="text-align: right;">Очки</span>
         </div>
       </div>
       {% for district in district_leaders %}
@@ -99,7 +99,7 @@
         <div class="leaderboard-head">
           <span>Ранг</span>
           <span>Альянс</span>
-          <span style="text-align: right;">Переводы</span>
+          <span style="text-align: right;">Очки</span>
         </div>
       </div>
       {% for alliance in alliance_leaders %}

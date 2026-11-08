@@ -21,6 +21,7 @@ urlpatterns = [
     path("sentences/", include("corpus.urls")),
     path("leaderboard/", include("gamification.urls")),
     path("editor/", include("editor.urls")),
+    path("clips/", include("clips.urls")),
 ]
 
 if settings.DEBUG:

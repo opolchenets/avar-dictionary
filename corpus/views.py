@@ -63,16 +63,14 @@ class HomeView(TemplateView):
             status=Sentence.Status.UNTRANSLATED
         ).first() or Sentence.objects.order_by("id").first()
         
+        from django.db.models import Sum as _Sum
+        week = timezone.now() - datetime.timedelta(days=7)
         context["leaders"] = (
-            TranslationSuggestion.objects.filter(status=TranslationSuggestion.Status.ACCEPTED)
-            .values("author__username", "author__profile__display_name")
-            .annotate(
-                total_points=Count("id"),
-                accepted_count=Count("id"),
-            )
-            .order_by("-total_points", "author__username")[:5]
+            user_model.objects.filter(point_entries__created_at__gte=week)
+            .annotate(total_points=_Sum("point_entries__points"))
+            .values("username", "profile__display_name", "total_points")
+            .order_by("-total_points", "username")[:5]
         )
-        
         # Growth history for the chart
         history_raw = (
             Sentence.objects.filter(status=Sentence.Status.TRANSLATED)
@@ -107,6 +105,29 @@ class HomeView(TemplateView):
                     history_labels.append(entry["date"].strftime("%d.%m"))
                     history_values.append(cumulative)
         
+        # --- аудиофрагменты ---
+        from django.db.models import Sum
+        from clips.models import Clip
+        done_q = Clip.objects.filter(is_gold=False, status__in=[Clip.Status.AGREED, Clip.Status.RESOLVED])
+        context["clip_total"] = Clip.objects.filter(is_gold=False).count()
+        context["clip_done"] = done_q.count()
+        context["clip_disputed"] = Clip.objects.filter(status=Clip.Status.DISPUTED).count()
+        context["clip_minutes"] = round((done_q.aggregate(s=Sum("duration"))["s"] or 0) / 60)
+        context["latest_clips"] = done_q.order_by("-updated_at")[:5]
+        u = self.request.user
+        context["show_growth"] = u.is_authenticated and (u.is_staff or getattr(getattr(u, "profile", None), "is_editor", False))
+        hist = (done_q.annotate(date=TruncDate("updated_at")).values("date")
+                .annotate(count=Count("id")).order_by("date"))
+        history_labels, history_values, cumulative = [], [], 0
+        for entry in hist:
+            if entry["date"]:
+                cumulative += entry["count"]
+                history_labels.append(entry["date"].strftime("%d.%m"))
+                history_values.append(cumulative)
+        if len(history_values) < 2:
+            today = timezone.now().date()
+            history_labels = [(today - datetime.timedelta(days=1)).strftime("%d.%m"), today.strftime("%d.%m")]
+            history_values = [0, cumulative]
         context["history_labels"] = history_labels
         context["history_values"] = history_values
         
