@@ -41,29 +41,13 @@
     </div>
   </section>
 
-  <div class="stats-grid" style="margin-bottom: 2.5rem; gap: 1.25rem;">
-    <div class="stat-card">
-      <span>{{ total_points }}</span>
-      <p>всего очков</p>
-    </div>
-    <div class="stat-card">
-      <span>{{ translations_count }}</span>
-      <p>основных переводов</p>
-    </div>
-    <div class="stat-card">
-      <span>{{ suggestions_count }}</span>
-      <p>предложенных правок</p>
-    </div>
-    <div class="stat-card">
-      <span>{{ accepted_suggestions_count }}</span>
-      <p>принято правок</p>
-    </div>
-    {% if profile.accepted_suggestions_count > 0 %}
-    <div class="stat-card" style="border-top: 4px solid {% if profile.average_quality_score > 0.8 %}#1a7f37{% elif profile.average_quality_score > 0.5 %}#9a6700{% else %}#cf222e{% endif %};">
-      <span>{{ profile.quality_percentage }}%</span>
-      <p>индекс доверия</p>
-    </div>
-    {% endif %}
+  <div class="stats-grid" style="margin-bottom: 2rem">
+    <div class="stat-card"><div class="big-stat-value">{{ w_edits }}</div><div class="big-stat-label">Проверено фрагментов</div></div>
+    <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ w_edits_acc }}</div><div class="big-stat-label">Принято правок</div>
+      <div style="margin-top:8px">{% include "gamification/_pct.html" with p=w_edits_pct %}</div></div>
+    <div class="stat-card"><div class="big-stat-value">{{ w_recs }}</div><div class="big-stat-label">Озвучено фраз</div></div>
+    <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ w_minutes }}</div><div class="big-stat-label">Минут озвучки принято</div>
+      <div style="margin-top:8px">{% include "gamification/_pct.html" with p=w_recs_pct %}</div></div>
   </div>
 
   <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
@@ -84,7 +68,7 @@
       <div class="heatmap-container">
         {% for day in activity_grid %}
           <div class="heatmap-day level-{% if day.count == 0 %}0{% elif day.count < 3 %}1{% elif day.count < 6 %}2{% elif day.count < 10 %}3{% else %}4{% endif %}" 
-               data-tooltip="{{ day.date }}: {{ day.count }} действий"></div>
+               data-tooltip="{{ day.date }}: {{ day.count }} работ"></div>
         {% endfor %}
       </div>
       <p style="margin-top: 1rem; font-size: 0.7rem; color: var(--muted); text-align: right; opacity: 0.8;">
@@ -97,20 +81,7 @@
     </div>
   </section>
 
-  <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
-    <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Достижения</h2>
-    <div class="achievement-grid">
-      {% for ua in achievements %}
-        <div class="achievement-card" title="{{ ua.achievement.name }} (от {{ ua.achievement.threshold }} переводов)">
-          <span style="font-size: 2.5rem; display: block; margin-bottom: 0.5rem;">{{ ua.achievement.icon }}</span>
-          <p style="margin: 0; font-weight: 800; font-size: 0.8rem; color: var(--accent);">{{ ua.achievement.name }}</p>
-          <p style="margin: 0.25rem 0 0; font-size: 0.65rem; color: var(--muted);">{{ ua.earned_at|date:"d.m.Y" }}</p>
-        </div>
-      {% empty %}
-        <p class="empty-state">Пока достижений нет. Переводите предложения, чтобы их получить!</p>
-      {% endfor %}
-    </div>
-  </section>
+
 
   {% if is_own_profile %}
     <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
@@ -132,68 +103,10 @@
   {% endif %}
 
   {% if is_own_profile and pending_suggestions %}
-    <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
-      <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem; color: var(--warning);">Мои переводы на проверке ({{ pending_suggestions|length }})</h2>
-      <div class="profile-suggestions">
-        {% for suggestion in pending_suggestions %}
-          <div class="profile-suggestion-card" style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line);">
-            <p class="subtle" style="font-size: 0.75rem; font-weight: 800; margin-bottom: 0.75rem;">ПРЕДЛОЖЕНИЕ #{{ suggestion.sentence.id }} — {{ suggestion.created_at|date:"d.m.Y H:i" }}</p>
-            <p style="font-weight: 700; margin-bottom: 1.25rem; font-size: 1.1rem;">{{ suggestion.sentence.source_text_ru }}</p>
-            
-            <form method="post" action="{% url 'sentence-list' %}" class="stack">
-              {% csrf_token %}
-              <input type="hidden" name="sentence_id" value="{{ suggestion.sentence.id }}">
-              <input type="hidden" name="next" value="{{ request.get_full_path }}">
-              <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
-                <div style="flex-grow: 1; min-width: 280px;">
-                  <label style="display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--muted); font-weight: 700;">Ваш вариант (можно отредактировать):</label>
-                  <textarea name="text_av" rows="2" style="font-size: 1rem; font-weight: 600; border: 2px solid var(--accent); border-radius: 8px; width: 100%; padding: 0.75rem;" placeholder="Введите перевод...">{{ suggestion.proposed_text_av }}</textarea>
-                </div>
-                <button type="submit" class="button" style="padding: 0.75rem 1.5rem; font-size: 0.9rem; height: 52px;">Сохранить</button>
-              </div>
-            </form>
-          </div>
-        {% endfor %}
-      </div>
-    </section>
+    
   {% endif %}
 
-  <section class="panel" style="margin-bottom: 2rem; padding: 1.5rem;">
-    <details {% if not is_own_profile %}open{% endif %} class="profile-details-list">
-      <summary style="cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;">
-        <h2 style="margin: 0; font-size: 1.4rem;">
-          {% if is_own_profile %}Принятые переводы и исправления редактора{% else %}Принятые переводы пользователя{% endif %}
-          <span style="font-size: 0.9rem; color: var(--muted); margin-left: 0.5rem; font-weight: normal;">({{ accepted_suggestions|length }})</span>
-        </h2>
-        <span class="button ghost small" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">Нажмите, чтобы {% if not is_own_profile %}свернуть{% else %}развернуть{% endif %}</span>
-      </summary>
-      
-      <div class="profile-accepted-list" style="margin-top: 2rem; display: grid; gap: 1.5rem;">
-        {% for suggestion in accepted_suggestions %}
-          <div class="profile-accepted-card" style="padding: 1.25rem; background: var(--bg); border-radius: 12px; border: 1px solid var(--line);">
-            <p class="subtle" style="font-size: 0.7rem; font-weight: 800; margin-bottom: 0.5rem; opacity: 0.7;">#{{ suggestion.sentence.id }} — {{ suggestion.reviewed_at|date:"d.m.Y" }}</p>
-            <p style="font-weight: 700; margin-bottom: 0.75rem; font-size: 1rem; line-height: 1.4;">{{ suggestion.sentence.source_text_ru }}</p>
-            
-            <div style="background: var(--paper); padding: 1rem; border-radius: 8px; font-size: 1.1rem; line-height: 1.4; border: 1px solid var(--line);">
-              {% if is_own_profile %}
-                {{ suggestion.original_text_av|highlight_diff:suggestion.proposed_text_av }}
-              {% else %}
-                {{ suggestion.proposed_text_av }}
-              {% endif %}
-            </div>
-            
-            {% if suggestion.editor_note and is_own_profile %}
-              <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--muted); padding-left: 1rem; border-left: 3px solid var(--accent);">
-                <strong>Комментарий редактора:</strong> {{ suggestion.editor_note }}
-              </p>
-            {% endif %}
-          </div>
-        {% empty %}
-          <p class="empty-state" style="padding: 2rem 0;">Пока нет принятых переводов.</p>
-        {% endfor %}
-      </div>
-    </details>
-  </section>
+  
 
   <section class="panel" style="padding: 1.5rem;">
     <h2 style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.4rem;">Информация об аккаунте</h2>
@@ -233,7 +146,7 @@
           {% elif profile.role == 'co_editor' %}
             <span class="badge co-editor">Соредактор</span>
           {% else %}
-            <span class="badge">Переводчик</span>
+            <span class="badge">Участник</span>
           {% endif %}
         </span>
       </div>

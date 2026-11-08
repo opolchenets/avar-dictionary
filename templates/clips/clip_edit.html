@@ -47,6 +47,8 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey&&e.key==='Enter'&&t){e.preventDefault();t.form.querySelector('[value=save]').click();}
   if(e.altKey&&e.key==='1'){e.preventDefault();ins('Ӏ');}
 });
+// автозамена палочки: г к л т х ц ч + l I 1 і → Ӏ
+t&&t.addEventListener('input',()=>{const p=t.selectionStart,v=t.value.replace(/([гклтхцчГКЛТХЦЧ])[lI1іІӏ]/g,'$1Ӏ');if(v!==t.value){t.value=v;t.selectionStart=t.selectionEnd=p;}});
 a&&a.addEventListener('canplay',()=>{a.play().catch(()=>{});},{once:true});
 </script>
 {% endblock %}
