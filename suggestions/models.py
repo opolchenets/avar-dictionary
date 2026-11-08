@@ -16,7 +16,7 @@ class TranslationSuggestion(models.Model):
 
     sentence = models.ForeignKey(
         Sentence,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="suggestions",
     )
     # Текст, который может редактировать редактор
@@ -73,7 +73,7 @@ class SuggestionVote(models.Model):
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="suggestion_votes",
     )
     created_at = models.DateTimeField("Создано", auto_now_add=True)

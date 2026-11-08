@@ -2,7 +2,7 @@ import datetime
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db.models import BooleanField, Exists, OuterRef, Prefetch
-from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.db.models import Case, Count, IntegerField, Q, Sum, Value, When
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -11,6 +11,7 @@ from django.views import View
 from django.db.models.functions import TruncDate
 from django.views.generic import DetailView, ListView, TemplateView
 
+from clips.models import Clip
 from suggestions.models import SuggestionVote, TranslationSuggestion
 
 from .forms import SentenceFilterForm, TranslationSubmissionForm
@@ -63,11 +64,10 @@ class HomeView(TemplateView):
             status=Sentence.Status.UNTRANSLATED
         ).first() or Sentence.objects.order_by("id").first()
         
-        from django.db.models import Sum as _Sum
         week = timezone.now() - datetime.timedelta(days=7)
         context["leaders"] = (
             user_model.objects.filter(point_entries__created_at__gte=week)
-            .annotate(total_points=_Sum("point_entries__points"))
+            .annotate(total_points=Sum("point_entries__points"))
             .values("username", "profile__display_name", "total_points")
             .order_by("-total_points", "username")[:5]
         )
@@ -106,8 +106,6 @@ class HomeView(TemplateView):
                     history_values.append(cumulative)
         
         # --- аудиофрагменты ---
-        from django.db.models import Sum
-        from clips.models import Clip
         done_q = Clip.objects.filter(is_gold=False, status__in=[Clip.Status.AGREED, Clip.Status.RESOLVED])
         context["clip_total"] = Clip.objects.filter(is_gold=False).count()
         context["clip_done"] = done_q.count()

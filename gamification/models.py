@@ -48,7 +48,7 @@ class PointLedger(models.Model):
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="point_entries",
     )
     reason = models.CharField("Причина", max_length=40, choices=Reason.choices)
@@ -69,7 +69,7 @@ class PointLedger(models.Model):
     )
     clip = models.ForeignKey(
         "clips.Clip",
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="point_entries",

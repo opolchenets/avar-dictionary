@@ -8,6 +8,7 @@ if not exist .venv (
   python -m venv .venv
   .venv\Scripts\python -m pip install -q -r requirements.txt pillow
 )
+.venv\Scripts\python manage.py makemigrations accounts corpus suggestions gamification editor clips reading -v0
 .venv\Scripts\python manage.py migrate -v0
 echo.
 echo  Пользователь: http://127.0.0.1:8000/clips/        (user1 / user12345)

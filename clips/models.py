@@ -1,22 +1,7 @@
-import difflib
-import re
-
 from django.conf import settings
 from django.db import models
 
-PAL = "Ӏ"  # Ӏ — единая палочка
-
-
-def normalize(text: str) -> str:
-    """Для сравнения правок: палочка → Ӏ, без регистра, пунктуации и лишних пробелов."""
-    t = re.sub(r"(?<=[А-Яа-яЁё])[IlІіӀӏ1|]", PAL, text or "")
-    t = t.lower().replace("ё", "е").replace(PAL.lower(), PAL)
-    t = re.sub(r"[^\w\sӀ-]", " ", t)
-    return re.sub(r"\s+", " ", t).strip()
-
-
-def similarity(a: str, b: str) -> float:
-    return difflib.SequenceMatcher(None, normalize(a), normalize(b)).ratio()
+from common.normalizer import char_errors, normalize, similarity  # noqa: F401 (реэкспорт для clips.services)
 
 
 class Batch(models.Model):
@@ -43,7 +28,7 @@ class Clip(models.Model):
 
     REQUIRED_EDITS = 2
 
-    batch = models.ForeignKey(Batch, on_delete=models.CASCADE, related_name="clips", verbose_name="Пачка")
+    batch = models.ForeignKey(Batch, on_delete=models.PROTECT, related_name="clips", verbose_name="Пачка")
     audio = models.FileField("Аудио", upload_to="clips/")
     duration = models.FloatField("Длительность, с", default=0)
     draft_text = models.TextField("Черновик (ASR)", blank=True)
@@ -68,18 +53,6 @@ class Clip(models.Model):
         return self.status in (self.Status.AGREED, self.Status.RESOLVED)
 
 
-def char_errors(a: str, b: str) -> int:
-    """Число посимвольных ошибок (расстояние Левенштейна) после нормализации."""
-    a, b = normalize(a), normalize(b)
-    prev = list(range(len(b) + 1))
-    for i, ca in enumerate(a, 1):
-        cur = [i]
-        for j, cb in enumerate(b, 1):
-            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
-        prev = cur
-    return prev[-1]
-
-
 def texts_match(a: str, b: str) -> bool:
     """Тот же порог, что для проверочных: от 30 знаков — расхождение не больше 1 символа, короче — ни одного."""
     errs = char_errors(a, b)
@@ -99,8 +72,8 @@ class ClipEdit(models.Model):
         ACCEPTED = "accepted", "Принята"
         REJECTED = "rejected", "Отклонена"
 
-    clip = models.ForeignKey(Clip, on_delete=models.CASCADE, related_name="edits", verbose_name="Фрагмент")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="clip_edits")
+    clip = models.ForeignKey(Clip, on_delete=models.PROTECT, related_name="edits", verbose_name="Фрагмент")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="clip_edits")
     text = models.TextField("Текст правщика")
     gold_score = models.FloatField("Совпадение с эталоном", null=True, blank=True)
     errors = models.IntegerField("Ошибок (символов) относительно эталона", null=True, blank=True)

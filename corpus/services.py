@@ -4,6 +4,8 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.html import strip_tags
 
+from accounts.models import Notification, UserProfile
+from common.normalizer import fix_palochka
 from gamification.models import PointLedger
 from gamification.services import award_points
 from suggestions.models import TranslationSuggestion
@@ -16,8 +18,6 @@ class TranslationWorkflowError(Exception):
 
 
 def get_or_create_user_profile(user):
-    from accounts.models import UserProfile
-
     profile, _ = UserProfile.objects.get_or_create(
         user=user,
         defaults={"display_name": user.get_username()},
@@ -37,7 +37,7 @@ def normalize_avar_text(text: str) -> str:
     text = strip_tags(text).strip()
     
     # 2. Замена технических символов на правильную аварскую орфографию
-    text = re.sub(r'[1Il]', 'Ӏ', text)
+    text = fix_palochka(text)
     
     # 3. Принудительная точка в конце предложения
     if text and not text.endswith(('.', '!', '?', '»', '"')):
@@ -151,7 +151,6 @@ def review_translation_suggestion(
     if suggestion.status != TranslationSuggestion.Status.PENDING:
         raise TranslationWorkflowError("Эта правка уже обработана.")
 
-    from accounts.models import UserProfile
     reviewer_profile = getattr(reviewer, "profile", None)
     is_co_editor_reviewer = (
         reviewer_profile is not None
@@ -214,7 +213,6 @@ def review_translation_suggestion(
         suggestion.save()
 
         # Создаем уведомление для автора
-        from accounts.models import Notification
         Notification.objects.create(user=suggestion.author, suggestion=suggestion)
 
         # Отклоняем остальные
@@ -243,7 +241,6 @@ def review_translation_suggestion(
         suggestion.save()
 
         # Создаем уведомление для автора
-        from accounts.models import Notification
         Notification.objects.create(user=suggestion.author, suggestion=suggestion)
         
         set_sentence_translation(

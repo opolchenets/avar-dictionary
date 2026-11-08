@@ -1,3 +1,5 @@
+from collections import Counter
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import redirect_to_login
@@ -5,7 +7,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic import CreateView, TemplateView
 from django.urls import reverse_lazy
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.http import JsonResponse
@@ -16,7 +18,11 @@ import datetime
 
 from .forms import ProfileDisplayNameForm, SimpleSignUpForm
 from .models import UserProfile, Notification
+from clips.models import ClipEdit
+from corpus.models import Sentence
 from gamification.models import UserAchievement
+from reading.models import Recording
+from suggestions.models import TranslationSuggestion
 
 User = get_user_model()
 
@@ -44,8 +50,6 @@ class SignUpView(CreateView):
 
 
 def get_user_profile_data(user):
-    from suggestions.models import TranslationSuggestion
-    from corpus.models import Sentence
 
     profile, _ = UserProfile.objects.get_or_create(
         user=user,
@@ -62,9 +66,6 @@ def get_user_profile_data(user):
     
     # Данные для графика активности (за последний год)
     one_year_ago = timezone.now() - datetime.timedelta(days=365)
-    from collections import Counter
-    from clips.models import ClipEdit
-    from reading.models import Recording
     _days = Counter()
     for q in (ClipEdit.objects.filter(user=user, created_at__gte=one_year_ago),
               Recording.objects.filter(user=user, created_at__gte=one_year_ago)):
@@ -129,9 +130,6 @@ def get_user_profile_data(user):
     }
 
 def _work_stats(user):
-    from django.db.models import Sum
-    from clips.models import ClipEdit
-    from reading.models import Recording
     e = ClipEdit.objects.filter(user=user)
     r = Recording.objects.filter(user=user)
     e_acc, e_j = e.filter(verdict="accepted").count(), e.filter(verdict__in=["accepted", "rejected"]).count()
@@ -149,7 +147,6 @@ class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/profile.html"
 
     def get_context_data(self, **kwargs):
-        from suggestions.models import TranslationSuggestion
         context = super().get_context_data(**kwargs)
         user = self.request.user
         data = get_user_profile_data(user)

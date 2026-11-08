@@ -4,7 +4,9 @@ from django.utils import timezone
 
 from gamification.models import PointLedger
 
-from .models import Clip, ClipEdit, char_errors, gold_is_correct, normalize, similarity, texts_match
+from common.normalizer import char_errors, similarity
+
+from .models import Clip, ClipEdit, gold_is_correct, texts_match
 
 POINTS_ACCEPTED = 1   # очко начисляется только за принятую правку (редактором или алгоритмом для контрольных)
 
