@@ -15,6 +15,7 @@
     <button type="button" class="tab-btn is-active" data-target="overall-board">Общий</button>
     <button type="button" class="tab-btn" data-target="district-board">По районам</button>
     <button type="button" class="tab-btn" data-target="alliance-board">По альянсам</button>
+    <button type="button" class="tab-btn" data-target="accuracy-board">По точности</button>
   </div>
 
   <!-- 1. Overall User Leaderboard -->
@@ -117,6 +118,21 @@
         <div style="padding: 4rem 2rem; text-align: center;">
           <p class="empty-state">Альянсы появятся в рейтинге после того, как их участники сделают переводы.</p>
         </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="accuracy-board" class="tab-content" style="display: none;">
+    <div class="panel" style="padding:0;overflow:hidden">
+      <div class="leaderboard-head"><span>Ранг</span><span>Участник</span><span style="text-align:right">Принято</span></div>
+      {% for r in accuracy_leaders %}
+        <div class="leaderboard-row">
+          <span>#{{ forloop.counter }}</span>
+          <span><strong>{{ r.name }}</strong> <span class="leaderboard-meta">{{ r.accepted }} из {{ r.judged }} проверенных правок</span></span>
+          <span class="leaderboard-points">{{ r.pct }}%</span>
+        </div>
+      {% empty %}
+        <p class="empty-state">Сюда попадают участники, у которых проверено не меньше {{ min_judged }} правок.</p>
       {% endfor %}
     </div>
   </section>
