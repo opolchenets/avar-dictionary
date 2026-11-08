@@ -15,6 +15,12 @@ class SimpleSignUpForm(UserCreationForm):
         empty_label="Выберите район...",
     )
 
+    rights_consent = forms.BooleanField(
+        required=True,
+        label="Я передаю проекту «Авар МацӀ» безвозмездно и бессрочно все права на мои аудиозаписи и правки текста, отправленные через сайт, — в том числе право использовать их для обучения любых моделей, публиковать, распространять и передавать третьим лицам, в том числе в коммерческих целях.",
+        error_messages={"required": "Без согласия на передачу прав участвовать нельзя."},
+    )
+
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ("username", "district")

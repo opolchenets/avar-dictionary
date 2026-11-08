@@ -197,3 +197,6 @@ button.button.danger,a.button.danger{background:var(--bad);border-color:var(--ba
 .pal-demo{display:flex;gap:1.5rem;justify-content:center;font-family:monospace;font-size:1.3rem;background:var(--surface-2);border-radius:10px;padding:.8rem;margin:.4rem 0 .8rem}
 
 .suggest-box{grid-column:1/-1;background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 12px;font-weight:600;font-size:.9rem}
+
+.rights-box{background:var(--warn-bg);color:var(--text);border-left:4px solid var(--warn);border-radius:10px;padding:14px 16px;margin:1rem 0 .5rem;line-height:1.55}
+.consent span{line-height:1.45}
