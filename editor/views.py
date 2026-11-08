@@ -1,7 +1,7 @@
 import csv
 
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
@@ -263,7 +263,6 @@ class SentenceImportView(EditorRequiredMixin, FormView):
         for ru_text, av_text in unique_prepared:
             if ru_text not in existing:
                 # Нормализуем русский текст (только точка и пробелы)
-                from corpus.services import normalize_avar_text
                 # Для русского просто убираем теги и ставим точку, палочки не трогаем
                 clean_ru = ru_text.strip()
                 if clean_ru and not clean_ru.endswith(('.', '!', '?', '»', '"')):
@@ -301,7 +300,6 @@ class SuggestionQueueView(CoEditorRequiredMixin, ListView):
         return redirect("home")
 
     def get_queryset(self):
-        from django.db.models import Prefetch
         
         # Подготавливаем отсортированный кверисет для правок
         sorted_suggestions = TranslationSuggestion.objects.filter(

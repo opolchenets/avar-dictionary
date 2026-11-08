@@ -25,8 +25,8 @@ class Recording(models.Model):
         REDO = "redo", "Нужно переозвучить"
         REJECTED = "rejected", "Отклонена"
 
-    prompt = models.ForeignKey(Prompt, on_delete=models.CASCADE, related_name="recordings", verbose_name="Фраза")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="recordings")
+    prompt = models.ForeignKey(Prompt, on_delete=models.PROTECT, related_name="recordings", verbose_name="Фраза")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recordings")
     audio = models.FileField("Аудио", upload_to="recordings/")
     duration = models.FloatField("Длительность, с", default=0)
     status = models.CharField("Статус", max_length=10, choices=Status.choices, default=Status.PENDING)
@@ -46,7 +46,7 @@ class Recording(models.Model):
 
 
 class Consent(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reading_consent")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="reading_consent")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
