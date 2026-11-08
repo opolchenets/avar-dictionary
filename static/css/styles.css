@@ -1,23 +1,25 @@
 /* Авар МацӀ — стили. Цвета: тёплая бумага + гранатовый акцент (дагестанский ковёр) */
 :root{
-  --bg:#f6f2ea; --surface:#fffdf8; --line:#e3dacb;
-  --text:#2a2420; --muted:#7a6f63; --accent:#a3322a; --accent-2:#c9822b;
-  --ok:#2f7d4f; --ok-bg:#e6f2ea; --warn:#9a6a10; --warn-bg:#fbf1dc; --bad:#a3322a; --bad-bg:#f8e5e2;
-  --radius:12px; --shadow:0 1px 2px rgba(60,40,20,.06),0 4px 16px rgba(60,40,20,.06);
+  /* Стиль A «Горы»: холодный синий, строгий */
+  --bg:#eef2f6; --surface:#ffffff; --surface-2:#e6ecf2; --line:#d5dee8;
+  --text:#16202b; --muted:#5d6b7a; --accent:#2563a8; --accent-2:#3b8fd0;
+  --ok:#1f8a5b; --ok-bg:#e3f4ec; --warn:#a86a05; --warn-bg:#fbf1dc; --bad:#c2413a; --bad-bg:#fbe7e5;
+  --radius:10px; --shadow:0 1px 2px rgba(22,32,43,.05),0 4px 14px rgba(22,32,43,.06);
   --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
-  --serif:"PT Serif",Georgia,"Times New Roman",serif;
+  --serif:var(--font);
+  --ink:var(--text); --ink-panel:#16202b; --paper:var(--surface); --soft:var(--surface-2);
+  --danger:var(--bad); --success:var(--ok); --warning:var(--warn);
 }
-:root{--surface-2:#f1ebdf; --ink:var(--text); --ink-panel:#2a211d; --paper:var(--surface); --soft:var(--surface-2); --danger:var(--bad); --success:var(--ok); --warning:var(--warn)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#1b1715; --surface:#24201d; --surface-2:#2c2723; --line:#3a332e;
-  --text:#ece5dc; --muted:#a59a8e; --accent:#e0675c; --accent-2:#e3a14f;
-  --ok:#6cc391; --ok-bg:#1f3328; --warn:#e3b55c; --warn-bg:#3a2f1a; --bad:#ef8077; --bad-bg:#3d2422;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25); --ink-panel:#120f0d;}}
+  --bg:#0f151c; --surface:#16202b; --surface-2:#1d2a37; --line:#2a3a4a;
+  --text:#e6edf4; --muted:#93a4b5; --accent:#5a9be0; --accent-2:#7bb6ee;
+  --ok:#5cc49a; --ok-bg:#143026; --warn:#e3b55c; --warn-bg:#33291a; --bad:#ef7d74; --bad-bg:#3a2020;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25); --ink-panel:#0a0f14;}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 var(--font)}
 a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
-h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .6em} h1{font-size:2rem} h2{font-size:1.45rem} h3{font-size:1.15rem}
+h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .6em;letter-spacing:-.01em;font-weight:700} h1{font-size:2rem} h2{font-size:1.45rem} h3{font-size:1.15rem}
 p{margin:0 0 1em} img{max-width:100%}
 .container{max-width:1120px;margin:0 auto;padding:0 16px}
 .page-shell{padding:28px 0 56px;min-height:60vh}
@@ -175,3 +177,11 @@ button.button.ghost{background:transparent;color:var(--accent)}
 .edit-actions{display:flex;gap:6px;margin:0}
 @media(max-width:700px){.edit-row{grid-template-columns:1fr}}
 .status.verdict-accepted{background:var(--ok-bg);color:var(--ok)} .status.verdict-rejected{background:var(--bad-bg);color:var(--bad)} .status.verdict-pending{background:var(--warn-bg);color:var(--warn)}
+.read-text{font-size:1.45rem;line-height:1.5;margin:0}
+.consent{display:flex;gap:10px;align-items:flex-start;font-weight:500;font-size:.9rem;color:var(--muted)} .consent input{margin-top:3px}
+.rank-table td{vertical-align:middle}.rank-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.rank-table .rank{width:44px;color:var(--muted);font-weight:700}.rank-name{font-weight:700;color:var(--text)}
+.pct{display:flex;align-items:center;gap:8px;min-width:120px}.pct-bar{flex:1;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.pct-bar span{display:block;height:100%;border-radius:99px}.pct-bar .hi{background:var(--ok)}.pct-bar .mid{background:#d9a12b}.pct-bar .lo{background:var(--bad)}
+.pct-val{font-size:.85rem;font-weight:700;min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
+button.button.danger,a.button.danger{background:var(--bad);border-color:var(--bad);color:#fff}

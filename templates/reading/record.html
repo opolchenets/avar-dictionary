@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Озвучка — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <div class="section-head">
+    <div><p class="eyebrow"><a href="{% url 'reading-home' %}">← Прочтение</a></p><h1>Прочитайте вслух</h1></div>
+    {% if mine and mine.status == 'redo' %}<span class="status verdict-redo">Переозвучка{% if mine.note %}: {{ mine.note }}{% endif %}</span>{% endif %}
+  </div>
+  <div class="panel"><p class="read-text">{{ prompt.text }}</p>
+    {% if prompt.source %}<p class="mod-info-label">{{ prompt.source }}</p>{% endif %}</div>
+
+  {% if locked %}
+    <div class="panel"><p>Вы уже озвучили эту фразу — статус: <b>{{ mine.get_status_display }}</b>.</p>
+      <a class="button" href="{% url 'reading-next' %}">Следующая →</a></div>
+  {% else %}
+  <div class="panel stack" id="rec">
+    {% if need_consent %}
+    <label class="consent"><input type="checkbox" id="consent"> Я согласен(на), что моя запись будет использована только для обучения внутренней модели распознавания аварской речи и не будет опубликована.</label>
+    {% endif %}
+    <div class="action-row">
+      <button type="button" class="button" id="btnRec">● Записать</button>
+      <button type="button" class="button subtle" id="btnStop" disabled>■ Стоп</button>
+      <span id="timer" class="mod-info-label">0,0 с</span>
+    </div>
+    <audio id="preview" controls style="width:100%;display:none"></audio>
+    <p class="helptext">Читайте спокойно, в тишине, на расстоянии ладони от микрофона. Не больше {{ max_seconds }} секунд.</p>
+    <div class="action-row action-row--between">
+      <a class="button subtle" href="{% url 'reading-next' %}">Пропустить</a>
+      <button type="button" class="button" id="btnSend" disabled>Отправить и дальше</button>
+    </div>
+    <p id="err" class="error" style="display:none"></p>
+  </div>
+  {% endif %}
+</div>
+{% if not locked %}
+<script>
+const $=id=>document.getElementById(id); let rec,chunks=[],blob=null,t0=0,dur=0,tick;
+const MAX={{ max_seconds }};
+function err(m){$('err').textContent=m;$('err').style.display=m?'block':'none';}
+$('btnRec').onclick=async()=>{
+  err('');
+  try{const s=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false}});
+    rec=new MediaRecorder(s);chunks=[];
+    rec.ondataavailable=e=>chunks.push(e.data);
+    rec.onstop=()=>{s.getTracks().forEach(t=>t.stop());blob=new Blob(chunks,{type:rec.mimeType});
+      $('preview').src=URL.createObjectURL(blob);$('preview').style.display='block';$('btnSend').disabled=false;};
+    rec.start();t0=Date.now();$('btnRec').disabled=true;$('btnStop').disabled=false;$('btnSend').disabled=true;
+    tick=setInterval(()=>{dur=(Date.now()-t0)/1000;$('timer').textContent=dur.toFixed(1).replace('.',',')+' с';if(dur>=MAX)stop();},100);
+  }catch(e){err('Нет доступа к микрофону. Разрешите его в браузере.');}
+};
+function stop(){if(rec&&rec.state==='recording'){rec.stop();clearInterval(tick);$('btnRec').disabled=false;$('btnRec').textContent='● Записать заново';$('btnStop').disabled=true;}}
+$('btnStop').onclick=stop;
+$('btnSend').onclick=async()=>{
+  const c=$('consent'); if(c&&!c.checked){err('Отметьте согласие на использование записи.');return;}
+  $('btnSend').disabled=true;const fd=new FormData();
+  fd.append('audio',blob,'rec.webm');fd.append('duration',dur.toFixed(2));if(c)fd.append('consent','1');
+  fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
+  const r=await fetch('',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));
+  if(r.ok&&j.next)location.href=j.next;else{err(j.error||'Ошибка отправки');$('btnSend').disabled=false;}
+};
+</script>
+{% endif %}
+{% endblock %}

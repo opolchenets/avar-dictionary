@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Прочтение — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <div class="section-head">
+    <h1>Прочтение</h1>
+    {% if pending_review is not None %}<a class="button ghost" href="{% url 'reading-review' %}">На проверку: {{ pending_review }}</a>{% endif %}
+  </div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="big-stat-value">{{ total }}</div><div class="big-stat-label">Фраз для чтения</div></div>
+    <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ done }}</div><div class="big-stat-label">Озвучено</div></div>
+    <div class="stat-card"><div class="big-stat-value">{{ minutes }}</div><div class="big-stat-label">Минут принято</div></div>
+  </div>
+  <div class="panel">
+    <h2>Как это работает</h2>
+    <ol class="how-list">
+      <li>Вам показывают фразу из книги, у которой ещё нет озвучки.</li>
+      <li>Нажимаете «Записать», читаете фразу вслух, слушаете себя и отправляете.</li>
+      <li>Редактор прослушивает: принимает, просит переозвучить (это второй шанс, не штраф) или отклоняет.</li>
+    </ol>
+    <p class="mod-info-label">Ваши записи используются только для обучения внутренней модели распознавания речи и никуда не публикуются.</p>
+    <div class="action-row">
+      {% if request.user.is_authenticated %}<a class="button" href="{% url 'reading-next' %}">Озвучить фразу →</a>
+      {% else %}<a class="button" href="{% url 'login' %}?next={% url 'reading-next' %}">Войти и начать</a>{% endif %}
+    </div>
+  </div>
+  {% if redo %}
+  <div class="panel">
+    <h2>Нужно переозвучить</h2>
+    {% for r in redo %}
+      <div class="info-row"><a href="{% url 'reading-record' r.prompt.pk %}">{{ r.prompt.text|truncatechars:80 }}</a>
+        <span class="mod-info-label">{{ r.note }}</span></div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if my %}
+  <div class="panel">
+    <h2>Мои озвучки</h2>
+    <div class="stats-grid" style="margin-bottom:14px">
+      <div class="stat-card"><div class="big-stat-value">{{ my.total }}</div><div class="big-stat-label">Озвучено фраз</div></div>
+      <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ my.minutes }}</div><div class="big-stat-label">Минут принято</div></div>
+      <div class="stat-card"><div class="big-stat-value" style="color:var(--muted)">{{ my.pending }}</div><div class="big-stat-label">Ждут проверки</div></div>
+    </div>
+    {% for r in recent %}
+      <div class="info-row"><span>{{ r.prompt.text|truncatechars:70 }}</span><span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
+    {% empty %}<p class="empty-state">Пока нет записей.</p>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
