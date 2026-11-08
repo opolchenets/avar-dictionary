@@ -49,7 +49,8 @@ class ClipEditView(LoginRequiredMixin, View):
     def get(self, request, pk):
         clip = get_object_or_404(Clip, pk=pk)
         mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
-        locked = clip.status != Clip.Status.OPEN and not mine
+        # править можно только открытый фрагмент; после решения (совпало / редактор) правка закрыта
+        locked = clip.status != Clip.Status.OPEN or (mine is not None and mine.verdict != ClipEdit.Verdict.PENDING)
         return render(request, "clips/clip_edit.html", {
             "clip": clip, "mine": mine, "locked": locked,
             "text": mine.text if mine else clip.draft_text,
@@ -63,7 +64,8 @@ class ClipEditView(LoginRequiredMixin, View):
         if not text:
             messages.error(request, "Текст пустой. Если в записи нет речи, напишите «#».")
             return redirect("clip-edit", pk=pk)
-        if clip.status != Clip.Status.OPEN and not ClipEdit.objects.filter(clip=clip, user=request.user).exists():
+        mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
+        if clip.status != Clip.Status.OPEN or (mine and mine.verdict != ClipEdit.Verdict.PENDING):
             messages.info(request, "Этот фрагмент уже закрыт.")
             return redirect("clip-next")
         submit_edit(clip, request.user, text)

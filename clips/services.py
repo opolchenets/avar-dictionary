@@ -13,8 +13,10 @@ def next_clip_for(user):
     """Следующий фрагмент: открытая пачка, пользователь его ещё не правил, правок меньше двух."""
     done_ids = ClipEdit.objects.filter(user=user).values_list("clip_id", flat=True)
     qs = (Clip.objects.filter(batch__is_open=True, status=Clip.Status.OPEN)
-          .exclude(id__in=done_ids))
-    return qs.annotate(n=Count("edits")).order_by("-n", "id").first()
+          .exclude(id__in=done_ids).annotate(n=Count("edits")))
+    # Фрагмент выбирается случайно из всех доступных: второго правщика подбирает случай,
+    # поэтому пары постоянно меняются и договориться «править вдвоём» нельзя.
+    return qs.order_by("?").first()
 
 
 def set_verdict(edit, verdict, by=None):
