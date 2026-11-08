@@ -2,11 +2,12 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView
 
 from .models import Batch, Clip, ClipEdit
-from .services import next_clip_for, resolve, set_verdict, submit_edit, user_stats
+from .services import accept_edit, matching_edit, next_clip_for, resolve, set_verdict, submit_edit, user_stats
 
 
 def is_editor(u):
@@ -24,8 +25,9 @@ class ClipHomeView(View):
             "total": total, "done": done, "left": total - done,
             "disputed": Clip.objects.filter(status=Clip.Status.DISPUTED).count(),
             "batches": Batch.objects.filter(is_open=True).annotate(
-                n=Count("clips", filter=Q(clips__is_gold=False)),
-                d=Count("clips", filter=Q(clips__is_gold=False, clips__status__in=["agreed", "resolved"]))),
+                n=Count("clips", distinct=True),
+                d=Count("clips", distinct=True, filter=Q(clips__status__in=["agreed", "resolved"])
+                        | Q(clips__is_gold=True, clips__edits__isnull=False))).filter(n__gt=0),
         }
         if request.user.is_authenticated:
             ctx["my"] = user_stats(request.user)
@@ -83,7 +85,7 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
         st = self.request.GET.get("status", "pending")
         qs = Clip.objects.prefetch_related("edits__user").select_related("batch")
         if st == "pending":   # редактору — только то, что не решилось автоматически
-            return qs.filter(is_gold=False, status="disputed", edits__verdict="pending").distinct()
+            return qs.filter(is_gold=False, status="disputed")
         if st == "gold":
             return qs.filter(is_gold=True)
         return qs.filter(status=st, is_gold=False)
@@ -91,28 +93,38 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
     def get_context_data(self, **kw):
         c = super().get_context_data(**kw)
         c["status"] = self.request.GET.get("status", "pending")
+        c["suggest"] = self.request.session.get("clip_suggest")
         c["counts"] = {s: Clip.objects.filter(status=s, is_gold=False).count()
                        for s in ["disputed", "open", "agreed", "resolved"]}
-        c["counts"]["pending"] = Clip.objects.filter(is_gold=False, status="disputed", edits__verdict="pending").distinct().count()
+        c["counts"]["pending"] = Clip.objects.filter(is_gold=False, status="disputed").count()
         c["counts"]["gold"] = Clip.objects.filter(is_gold=True).count()
         return c
 
 
 class ResolveView(UserPassesTestMixin, View):
+    """Редактор вписал свой итоговый текст. Если он совпал с вариантом правщика — сайт предложит принять тот вариант."""
+
     def test_func(self):
         return is_editor(self.request.user)
 
     def post(self, request, pk):
         clip = get_object_or_404(Clip, pk=pk)
         text = request.POST.get("text", "").strip()
-        if text:
-            resolve(clip, text)
-            messages.success(request, f"Фрагмент #{clip.pk} закрыт.")
-        return redirect(request.POST.get("next") or "clip-review")
+        back = request.POST.get("next") or reverse("clip-review")
+        if not text:
+            return redirect(back)
+        m = matching_edit(clip, text)
+        if m and not request.POST.get("force"):
+            request.session["clip_suggest"] = {"clip": clip.pk, "edit": m.pk, "text": text}
+            return redirect(f"{back}#clip-{clip.pk}")
+        resolve(clip, text, request.user)
+        request.session.pop("clip_suggest", None)
+        messages.success(request, f"Фрагмент #{clip.pk}: записан ваш текст, правки участников отклонены.")
+        return redirect(back)
 
 
 class VerdictView(UserPassesTestMixin, View):
-    """Редактор принимает или отклоняет конкретную правку."""
+    """Принять вариант правщика (он становится итогом, остальные — отклонены) или отклонить правку."""
 
     def test_func(self):
         return is_editor(self.request.user)
@@ -120,6 +132,10 @@ class VerdictView(UserPassesTestMixin, View):
     def post(self, request, pk):
         edit = get_object_or_404(ClipEdit, pk=pk, clip__is_gold=False)
         v = request.POST.get("verdict")
-        if v in (ClipEdit.Verdict.ACCEPTED, ClipEdit.Verdict.REJECTED, ClipEdit.Verdict.PENDING):
+        if v == ClipEdit.Verdict.ACCEPTED:
+            accept_edit(edit, request.user)
+            messages.success(request, f"Фрагмент #{edit.clip_id}: принят вариант {edit.user.username}.")
+        elif v == ClipEdit.Verdict.REJECTED:
             set_verdict(edit, v, request.user)
+        request.session.pop("clip_suggest", None)
         return redirect(request.POST.get("next") or "clip-review")

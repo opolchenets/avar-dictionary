@@ -24,22 +24,8 @@ def set_verdict(edit, verdict, by=None):
     if verdict == ClipEdit.Verdict.ACCEPTED:
         PointLedger.objects.get_or_create(user=edit.user, reason=PointLedger.Reason.CLIP_ACCEPTED,
                                           clip=edit.clip, defaults={"points": POINTS_ACCEPTED})
-        clip = edit.clip
-        if not clip.is_gold and not clip.is_done and clip.status != Clip.Status.AGREED:
-            clip.final_text, clip.status = edit.text, Clip.Status.RESOLVED
-            clip.save(update_fields=["final_text", "status", "updated_at"])
     else:
         PointLedger.objects.filter(user=edit.user, reason=PointLedger.Reason.CLIP_ACCEPTED, clip=edit.clip).delete()
-        clip = edit.clip
-        if not clip.is_gold and clip.final_text == edit.text:
-            other = clip.edits.filter(verdict=ClipEdit.Verdict.ACCEPTED).exclude(pk=edit.pk).first()
-            if other:
-                clip.final_text, clip.status = other.text, Clip.Status.RESOLVED
-            else:   # итог больше не подтверждён — возвращаем фрагмент в работу
-                n = clip.edits.count()
-                clip.final_text = ""
-                clip.status = Clip.Status.OPEN if n < Clip.REQUIRED_EDITS else Clip.Status.DISPUTED
-            clip.save(update_fields=["final_text", "status", "updated_at"])
 
 
 @transaction.atomic
@@ -71,10 +57,26 @@ def submit_edit(clip, user, text):
     return "saved", edit
 
 
-def resolve(clip, text):
-    """Редактор вписал итоговый текст сам: правки, совпавшие с ним, принимаются, остальные — отклоняются."""
+def accept_edit(edit, by):
+    """Редактор выбрал вариант правщика: он — итог; совпадающие с ним правки приняты, остальные отклонены."""
+    clip = edit.clip
+    clip.final_text, clip.status = edit.text, Clip.Status.RESOLVED
+    clip.save(update_fields=["final_text", "status", "updated_at"])
+    for e in clip.edits.all():
+        set_verdict(e, ClipEdit.Verdict.ACCEPTED if (e.pk == edit.pk or texts_match(e.text, edit.text))
+                    else ClipEdit.Verdict.REJECTED, by)
+
+
+def matching_edit(clip, text):
+    return next((e for e in clip.edits.select_related("user") if texts_match(e.text, text)), None)
+
+
+def resolve(clip, text, by=None):
+    """Редактор вписал свой текст: итог — его текст, все правки отклонены (совпадающие сюда не доходят)."""
     clip.final_text, clip.status = text.strip(), Clip.Status.RESOLVED
     clip.save(update_fields=["status", "final_text", "updated_at"])
+    for e in clip.edits.all():
+        set_verdict(e, ClipEdit.Verdict.ACCEPTED if texts_match(e.text, text) else ClipEdit.Verdict.REJECTED, by)
 
 
 def user_stats(user):

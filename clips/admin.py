@@ -11,7 +11,15 @@ class ClipEditInline(admin.TabularInline):
 
 @admin.register(Batch)
 class BatchAdmin(admin.ModelAdmin):
-    list_display = ("name", "source", "is_open", "created_at")
+    list_display = ("id", "name", "source", "n_clips", "n_gold", "is_open", "created_at")
+
+    @admin.display(description="Фрагментов")
+    def n_clips(self, obj):
+        return obj.clips.count()
+
+    @admin.display(description="Проверочных")
+    def n_gold(self, obj):
+        return obj.clips.filter(is_gold=True).count()
     list_editable = ("is_open",)
 
 
