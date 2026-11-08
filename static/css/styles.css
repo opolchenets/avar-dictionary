@@ -1,23 +1,25 @@
 /* Авар МацӀ — стили. Цвета: тёплая бумага + гранатовый акцент (дагестанский ковёр) */
 :root{
-  /* Стиль A «Горы»: холодный синий, строгий */
-  --bg:#eef2f6; --surface:#ffffff; --surface-2:#e6ecf2; --line:#d5dee8;
-  --text:#16202b; --muted:#5d6b7a; --accent:#2563a8; --accent-2:#3b8fd0;
+  /* Стиль 3f «Стекло»: бледный голубо-сиреневый градиент, полупрозрачные карточки */
+  --bg:#eae6ff; --bg-grad:linear-gradient(135deg,#dfe6ff,#ecdfff 60%,#f8e3ef);
+  --surface:rgba(255,255,255,.8); --surface-2:rgba(255,255,255,.55); --line:rgba(27,23,64,.09);
+  --text:#1b1740; --muted:#4b4775; --accent:#6c4cf1; --accent-2:#8f6cf5;
   --ok:#1f8a5b; --ok-bg:#e3f4ec; --warn:#a86a05; --warn-bg:#fbf1dc; --bad:#c2413a; --bad-bg:#fbe7e5;
-  --radius:10px; --shadow:0 1px 2px rgba(22,32,43,.05),0 4px 14px rgba(22,32,43,.06);
-  --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
-  --serif:var(--font);
-  --ink:var(--text); --ink-panel:#16202b; --paper:var(--surface); --soft:var(--surface-2);
+  --radius:14px; --shadow:0 4px 20px rgba(40,30,110,.08);
+  --glass:rgba(255,255,255,.7);
+  --font:"Inter","Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif; --serif:var(--font);
+  --ink:var(--text); --ink-panel:#1b1740; --paper:var(--surface); --soft:var(--surface-2);
   --danger:var(--bad); --success:var(--ok); --warning:var(--warn);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f151c; --surface:#16202b; --surface-2:#1d2a37; --line:#2a3a4a;
-  --text:#e6edf4; --muted:#93a4b5; --accent:#5a9be0; --accent-2:#7bb6ee;
+  --bg:#141228; --bg-grad:linear-gradient(135deg,#12142b,#1c1535 60%,#26152b);
+  --surface:rgba(34,31,62,.78); --surface-2:rgba(48,44,84,.6); --line:rgba(255,255,255,.08);
+  --text:#ece9ff; --muted:#a7a2cf; --accent:#9b84ff; --accent-2:#b9a6ff;
   --ok:#5cc49a; --ok-bg:#143026; --warn:#e3b55c; --warn-bg:#33291a; --bad:#ef7d74; --bad-bg:#3a2020;
-  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25); --ink-panel:#0a0f14;}}
+  --shadow:0 4px 24px rgba(0,0,0,.35); --glass:rgba(22,20,44,.7); --ink-panel:#0d0b1e;}}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 var(--font)}
+body{margin:0;background:var(--bg-grad,var(--bg)) fixed;background-color:var(--bg);color:var(--text);font:16px/1.55 var(--font)}
 a{color:var(--accent);text-decoration:none} a:hover{text-decoration:underline}
 h1,h2,h3{font-family:var(--serif);line-height:1.2;margin:0 0 .6em;letter-spacing:-.01em;font-weight:700} h1{font-size:2rem} h2{font-size:1.45rem} h3{font-size:1.15rem}
 p{margin:0 0 1em} img{max-width:100%}
@@ -185,3 +187,8 @@ button.button.ghost{background:transparent;color:var(--accent)}
 .pct-bar span{display:block;height:100%;border-radius:99px}.pct-bar .hi{background:var(--ok)}.pct-bar .mid{background:#d9a12b}.pct-bar .lo{background:var(--bad)}
 .pct-val{font-size:.85rem;font-weight:700;min-width:36px;text-align:right;font-variant-numeric:tabular-nums}
 button.button.danger,a.button.danger{background:var(--bad);border-color:var(--bad);color:#fff}
+
+/* стекло */
+.site-header,.site-footer{background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.panel,.stat-card,.workspace-card,.auth-card,.table-wrapper{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.button:not(.ghost):not(.subtle),button[type=submit]:not(.link-button):not(.subtle):not(.ghost){color:#fff}
