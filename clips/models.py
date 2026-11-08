@@ -80,6 +80,13 @@ def char_errors(a: str, b: str) -> int:
     return prev[-1]
 
 
+def texts_match(a: str, b: str) -> bool:
+    """Тот же порог, что для проверочных: от 30 знаков — расхождение не больше 1 символа, короче — ни одного."""
+    errs = char_errors(a, b)
+    n = max(len(normalize(a)), len(normalize(b)))
+    return errs <= 1 if n >= 30 else errs == 0
+
+
 def gold_is_correct(text: str, gold: str) -> bool:
     """≥ 30 символов: верно, если ошибок ≤ 1. Короче 30: верно только без ошибок."""
     errs = char_errors(text, gold)

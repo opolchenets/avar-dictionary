@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from gamification.models import PointLedger
 
-from .models import Clip, ClipEdit, char_errors, gold_is_correct, normalize, similarity
+from .models import Clip, ClipEdit, char_errors, gold_is_correct, normalize, similarity, texts_match
 
 POINTS_ACCEPTED = 1   # очко начисляется только за принятую правку (редактором или алгоритмом для контрольных)
 
@@ -25,7 +25,7 @@ def set_verdict(edit, verdict, by=None):
         PointLedger.objects.get_or_create(user=edit.user, reason=PointLedger.Reason.CLIP_ACCEPTED,
                                           clip=edit.clip, defaults={"points": POINTS_ACCEPTED})
         clip = edit.clip
-        if not clip.is_gold and not clip.is_done:
+        if not clip.is_gold and not clip.is_done and clip.status != Clip.Status.AGREED:
             clip.final_text, clip.status = edit.text, Clip.Status.RESOLVED
             clip.save(update_fields=["final_text", "status", "updated_at"])
     else:
@@ -55,13 +55,19 @@ def submit_edit(clip, user, text):
         set_verdict(edit, ClipEdit.Verdict.ACCEPTED if gold_is_correct(text, clip.gold_text)
                     else ClipEdit.Verdict.REJECTED)
         return "saved", edit
+    # Перекрёстная проверка: два правщика совпали (в пределах порога) — обе правки приняты автоматически,
+    # иначе фрагмент уходит редакторам на перепроверку.
     edits = list(clip.edits.all())
     if len(edits) >= Clip.REQUIRED_EDITS and clip.status == Clip.Status.OPEN:
-        same = normalize(edits[0].text) == normalize(edits[1].text)
-        clip.status = Clip.Status.AGREED if same else Clip.Status.DISPUTED
-        if same:
-            clip.final_text = edits[0].text
-        clip.save(update_fields=["status", "final_text", "updated_at"])
+        a, b = edits[0], edits[1]
+        if texts_match(a.text, b.text):
+            clip.status, clip.final_text = Clip.Status.AGREED, a.text
+            clip.save(update_fields=["status", "final_text", "updated_at"])
+            for e in (a, b):
+                set_verdict(e, ClipEdit.Verdict.ACCEPTED)
+        else:
+            clip.status = Clip.Status.DISPUTED
+            clip.save(update_fields=["status", "updated_at"])
     return "saved", edit
 
 

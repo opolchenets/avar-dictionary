@@ -82,8 +82,8 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
     def get_queryset(self):
         st = self.request.GET.get("status", "pending")
         qs = Clip.objects.prefetch_related("edits__user").select_related("batch")
-        if st == "pending":
-            return qs.filter(is_gold=False, edits__verdict="pending").distinct()
+        if st == "pending":   # редактору — только то, что не решилось автоматически
+            return qs.filter(is_gold=False, status="disputed", edits__verdict="pending").distinct()
         if st == "gold":
             return qs.filter(is_gold=True)
         return qs.filter(status=st, is_gold=False)
@@ -93,7 +93,7 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
         c["status"] = self.request.GET.get("status", "pending")
         c["counts"] = {s: Clip.objects.filter(status=s, is_gold=False).count()
                        for s in ["disputed", "open", "agreed", "resolved"]}
-        c["counts"]["pending"] = Clip.objects.filter(is_gold=False, edits__verdict="pending").distinct().count()
+        c["counts"]["pending"] = Clip.objects.filter(is_gold=False, status="disputed", edits__verdict="pending").distinct().count()
         c["counts"]["gold"] = Clip.objects.filter(is_gold=True).count()
         return c
 
