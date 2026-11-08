@@ -23,7 +23,7 @@
     <ol class="how-list">
       <li>Слушаете короткий фрагмент аварской речи (2–7 секунд).</li>
       <li>Под ним — черновик, который написала программа. Исправляете его <b>так, как сказал диктор</b>.</li>
-      <li>Каждый фрагмент независимо правят два человека. Совпало — фрагмент готов и оба получают очки. Разошлись — решает редактор.</li>
+      <li>Каждый фрагмент независимо правят два человека, потом правки проверяет редактор. Очки начисляются за принятые правки.</li>
     </ol>
     <div class="action-row">
       {% if request.user.is_authenticated %}
@@ -50,17 +50,16 @@
 
   {% if request.user.is_authenticated %}
   <div class="panel">
-    <div class="panel-title">
-      <h2 style="margin:0">Мои правки</h2>
-      <span class="badge">{{ my_edits }}</span>
+    <div class="panel-title"><h2 style="margin:0">Мои правки</h2></div>
+    <div class="stats-grid" style="margin-bottom:14px">
+      <div class="stat-card"><div class="big-stat-value">{{ my.total }}</div><div class="big-stat-label">Проверено фрагментов</div></div>
+      <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ my.accepted }}</div><div class="big-stat-label">Принято</div></div>
+      <div class="stat-card"><div class="big-stat-value" style="color:var(--muted)">{{ my.pending }}</div><div class="big-stat-label">Ждут проверки</div></div>
     </div>
-    {% if my_gold_n >= 5 and my_accuracy is not None %}
-      <p class="mod-info-label">Точность по проверочным фрагментам: <b>{% widthratio my_accuracy 1 100 %}%</b></p>
-    {% endif %}
     {% for e in recent %}
       <div class="info-row">
         <a href="{% url 'clip-edit' e.clip.pk %}">#{{ e.clip.pk }} {{ e.text|truncatechars:70 }}</a>
-        {% if not e.clip.is_gold %}<span class="status {{ e.clip.status }}">{{ e.clip.get_status_display }}</span>{% endif %}
+        <span class="status verdict-{{ e.verdict }}">{{ e.get_verdict_display }}</span>
       </div>
     {% empty %}
       <p class="empty-state">Пока нет правок.</p>

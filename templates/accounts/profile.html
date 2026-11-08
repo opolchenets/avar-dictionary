@@ -33,7 +33,7 @@
       {% endif %}
       {% if is_own_profile %}
         {% if request.user.is_staff or profile.is_editor %}
-          <a href="{% url 'editor-dashboard' %}" class="button ghost">Панель редактора</a>
+          <a href="{% url 'clip-review' %}" class="button ghost">Панель редактора</a>
         {% elif profile.is_co_editor %}
           <a href="{% url 'co-editor-dashboard' %}" class="button ghost">Панель соредактора</a>
         {% endif %}

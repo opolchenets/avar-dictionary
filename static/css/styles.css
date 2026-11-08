@@ -169,3 +169,9 @@ kbd{font:600 .72rem var(--font);border:1px solid var(--line);border-bottom-width
 .button kbd{background:transparent;color:inherit;border-color:currentColor;opacity:.7}
 button.button.subtle,a.button.subtle{background:var(--surface-2);color:var(--text);border-color:var(--line)}
 button.button.ghost{background:transparent;color:var(--accent)}
+
+.edit-row{display:grid;grid-template-columns:180px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.edit-who{display:flex;flex-direction:column;gap:4px}.edit-text{font-family:var(--serif)}
+.edit-actions{display:flex;gap:6px;margin:0}
+@media(max-width:700px){.edit-row{grid-template-columns:1fr}}
+.status.verdict-accepted{background:var(--ok-bg);color:var(--ok)} .status.verdict-rejected{background:var(--bad-bg);color:var(--bad)} .status.verdict-pending{background:var(--warn-bg);color:var(--warn)}

@@ -68,11 +68,39 @@ class Clip(models.Model):
         return self.status in (self.Status.AGREED, self.Status.RESOLVED)
 
 
+def char_errors(a: str, b: str) -> int:
+    """Число посимвольных ошибок (расстояние Левенштейна) после нормализации."""
+    a, b = normalize(a), normalize(b)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def gold_is_correct(text: str, gold: str) -> bool:
+    """≥ 30 символов: верно, если ошибок ≤ 1. Короче 30: верно только без ошибок."""
+    errs = char_errors(text, gold)
+    return errs <= 1 if len(normalize(gold)) >= 30 else errs == 0
+
+
 class ClipEdit(models.Model):
+    class Verdict(models.TextChoices):
+        PENDING = "pending", "Ждёт оценки"
+        ACCEPTED = "accepted", "Принята"
+        REJECTED = "rejected", "Отклонена"
+
     clip = models.ForeignKey(Clip, on_delete=models.CASCADE, related_name="edits", verbose_name="Фрагмент")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="clip_edits")
     text = models.TextField("Текст правщика")
     gold_score = models.FloatField("Совпадение с эталоном", null=True, blank=True)
+    errors = models.IntegerField("Ошибок (символов) относительно эталона", null=True, blank=True)
+    verdict = models.CharField("Оценка", max_length=10, choices=Verdict.choices, default=Verdict.PENDING)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                    related_name="clip_reviews", verbose_name="Оценил")
+    reviewed_at = models.DateTimeField("Оценено", null=True, blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
 
     class Meta:

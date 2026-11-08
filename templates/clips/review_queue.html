@@ -7,10 +7,11 @@
     <a class="button ghost" href="/admin/clips/batch/">Пачки</a>
   </div>
   <div class="category-tabs">
-    <a class="category-tab {% if status == 'disputed' %}is-active{% endif %}" href="?status=disputed">Спорные ({{ counts.disputed }})</a>
+    <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="?status=pending">Ждут оценки ({{ counts.pending }})</a>
+    <a class="category-tab {% if status == 'disputed' %}is-active{% endif %}" href="?status=disputed">Правщики разошлись ({{ counts.disputed }})</a>
     <a class="category-tab {% if status == 'open' %}is-active{% endif %}" href="?status=open">В работе ({{ counts.open }})</a>
-    <a class="category-tab {% if status == 'agreed' %}is-active{% endif %}" href="?status=agreed">Совпали ({{ counts.agreed }})</a>
-    <a class="category-tab {% if status == 'resolved' %}is-active{% endif %}" href="?status=resolved">Решены редактором ({{ counts.resolved }})</a>
+    <a class="category-tab {% if status == 'agreed' %}is-active{% endif %}" href="?status=agreed">Правщики совпали ({{ counts.agreed }})</a>
+    <a class="category-tab {% if status == 'resolved' %}is-active{% endif %}" href="?status=resolved">Готово ({{ counts.resolved }})</a>
     <a class="category-tab {% if status == 'gold' %}is-active{% endif %}" href="?status=gold">Контрольные ({{ counts.gold }})</a>
   </div>
 
@@ -25,7 +26,18 @@
       <div class="info-row"><span class="mod-info-label">Черновик ASR</span><span>{{ c.draft_text }}</span></div>
       {% if c.is_gold %}<div class="info-row"><span class="mod-info-label">Эталон</span><span>{{ c.gold_text }}</span></div>{% endif %}
       {% for e in c.edits.all %}
-        <div class="info-row"><span class="mod-info-label">{{ e.user.profile.display_name|default:e.user.username }}{% if c.is_gold %} · {% widthratio e.gold_score 1 100 %}%{% endif %}</span><span>{{ e.text }}</span></div>
+        <div class="edit-row">
+          <div class="edit-who"><span class="mod-info-label">{{ e.user.profile.display_name|default:e.user.username }}</span>
+            <span class="status verdict-{{ e.verdict }}">{{ e.get_verdict_display }}{% if c.is_gold %} · ошибок: {{ e.errors }}{% endif %}</span></div>
+          <div class="edit-text">{{ e.text }}</div>
+          {% if not c.is_gold %}
+          <form method="post" action="{% url 'clip-verdict' e.pk %}" class="edit-actions">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" name="verdict" value="accepted" class="button small-button {% if e.verdict != 'accepted' %}subtle{% endif %}">✓ Принять</button>
+            <button type="submit" name="verdict" value="rejected" class="button small-button {% if e.verdict != 'rejected' %}subtle{% else %}danger{% endif %}">✗ Отклонить</button>
+          </form>
+          {% endif %}
+        </div>
       {% endfor %}
       {% if c.final_text %}<div class="info-row"><span class="mod-info-label">Итог</span><span class="info-value">{{ c.final_text }}</span></div>{% endif %}
     </div>
@@ -34,7 +46,7 @@
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
       <textarea name="text" rows="2">{% if c.final_text %}{{ c.final_text }}{% else %}{% with c.edits.all|first as f %}{{ f.text|default:c.draft_text }}{% endwith %}{% endif %}</textarea>
-      <div class="action-row"><button type="submit" class="button small-button">Утвердить текст</button></div>
+      <div class="action-row"><button type="submit" class="button small-button subtle">Записать итоговый текст</button><span class="mod-info-label">если ни одна правка не верна — впишите правильный текст сам</span></div>
     </form>
     {% endif %}
   </div>

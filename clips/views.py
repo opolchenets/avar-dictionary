@@ -6,11 +6,12 @@ from django.views import View
 from django.views.generic import ListView
 
 from .models import Batch, Clip, ClipEdit
-from .services import next_clip_for, resolve, submit_edit, user_gold_accuracy
+from .services import next_clip_for, resolve, set_verdict, submit_edit, user_stats
 
 
 def is_editor(u):
-    return u.is_authenticated and (u.is_staff or getattr(getattr(u, "profile", None), "is_editor", False))
+    return u.is_authenticated and (u.is_staff or getattr(getattr(u, "profile", None), "is_editor", False)
+                                    or getattr(getattr(u, "profile", None), "is_co_editor", False))
 
 
 class ClipHomeView(View):
@@ -27,8 +28,7 @@ class ClipHomeView(View):
                 d=Count("clips", filter=Q(clips__is_gold=False, clips__status__in=["agreed", "resolved"]))),
         }
         if request.user.is_authenticated:
-            ctx["my_edits"] = ClipEdit.objects.filter(user=request.user).count()
-            ctx["my_accuracy"], ctx["my_gold_n"] = user_gold_accuracy(request.user)
+            ctx["my"] = user_stats(request.user)
             ctx["recent"] = (ClipEdit.objects.filter(user=request.user).select_related("clip")
                              .order_by("-created_at")[:10])
         return render(request, "clips/clip_home.html", ctx)
@@ -64,11 +64,9 @@ class ClipEditView(LoginRequiredMixin, View):
         if clip.status != Clip.Status.OPEN and not ClipEdit.objects.filter(clip=clip, user=request.user).exists():
             messages.info(request, "Этот фрагмент уже закрыт.")
             return redirect("clip-next")
-        status, edit = submit_edit(clip, request.user, text)
-        if status == Clip.Status.AGREED:
-            messages.success(request, "Ваш текст совпал со вторым правщиком — фрагмент готов! +3 очка.")
-        else:
-            messages.success(request, "Сохранено. +1 очко.")
+        submit_edit(clip, request.user, text)
+        n = ClipEdit.objects.filter(user=request.user).count()
+        messages.success(request, f"Сохранено. Вы проверили фрагментов: {n}.")
         return redirect("clip-next")
 
 
@@ -82,16 +80,20 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
         return is_editor(self.request.user)
 
     def get_queryset(self):
-        st = self.request.GET.get("status", "disputed")
+        st = self.request.GET.get("status", "pending")
         qs = Clip.objects.prefetch_related("edits__user").select_related("batch")
+        if st == "pending":
+            return qs.filter(is_gold=False, edits__verdict="pending").distinct()
         if st == "gold":
             return qs.filter(is_gold=True)
-        return qs.filter(status=st)
+        return qs.filter(status=st, is_gold=False)
 
     def get_context_data(self, **kw):
         c = super().get_context_data(**kw)
-        c["status"] = self.request.GET.get("status", "disputed")
-        c["counts"] = {s: Clip.objects.filter(status=s).count() for s in ["disputed", "open", "agreed", "resolved"]}
+        c["status"] = self.request.GET.get("status", "pending")
+        c["counts"] = {s: Clip.objects.filter(status=s, is_gold=False).count()
+                       for s in ["disputed", "open", "agreed", "resolved"]}
+        c["counts"]["pending"] = Clip.objects.filter(is_gold=False, edits__verdict="pending").distinct().count()
         c["counts"]["gold"] = Clip.objects.filter(is_gold=True).count()
         return c
 
@@ -106,4 +108,18 @@ class ResolveView(UserPassesTestMixin, View):
         if text:
             resolve(clip, text)
             messages.success(request, f"Фрагмент #{clip.pk} закрыт.")
+        return redirect(request.POST.get("next") or "clip-review")
+
+
+class VerdictView(UserPassesTestMixin, View):
+    """Редактор принимает или отклоняет конкретную правку."""
+
+    def test_func(self):
+        return is_editor(self.request.user)
+
+    def post(self, request, pk):
+        edit = get_object_or_404(ClipEdit, pk=pk, clip__is_gold=False)
+        v = request.POST.get("verdict")
+        if v in (ClipEdit.Verdict.ACCEPTED, ClipEdit.Verdict.REJECTED, ClipEdit.Verdict.PENDING):
+            set_verdict(edit, v, request.user)
         return redirect(request.POST.get("next") or "clip-review")
