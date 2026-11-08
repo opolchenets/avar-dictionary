@@ -14,7 +14,8 @@
       <a class="brand" href="{% url 'home' %}">Avar Corpus</a>
       <nav class="site-nav">
         <a href="{% url 'rules' %}">Правила</a>
-        <a href="{% url 'sentence-list' %}">Предложения</a>
+        <a href="{% url 'clip-home' %}">Аудиофрагменты</a>
+        <a href="{% url 'reading-home' %}">Прочтение</a>
         <a href="{% url 'leaderboard' %}">Лидерборд</a>
         {% if request.user.is_authenticated %}
           <div class="notification-wrapper">
@@ -41,12 +42,12 @@
               </div>
             </div>
           </div>
-          <span class="badge">Очки: {{ user_total_points }}</span>
+          
           <a href="{% url 'profile' %}">Профиль</a>
           {% if request.user.profile.is_editor or request.user.is_staff %}
-            <a href="{% url 'editor-dashboard' %}">Редактор</a>
+            <a href="{% url 'clip-review' %}">Редактор</a>
           {% elif request.user.profile.is_co_editor %}
-            <a href="{% url 'co-editor-dashboard' %}">Соредактор</a>
+            <a href="{% url 'clip-review' %}">Соредактор</a>
           {% endif %}
           <form method="post" action="{% url 'logout' %}" class="inline-form">
             {% csrf_token %}
@@ -79,7 +80,8 @@
         <h4 style="text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem; margin-bottom: 1.5rem; color: var(--accent);">Навигация</h4>
         <nav class="site-footer-nav">
           <a href="{% url 'rules' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Правила</a>
-          <a href="{% url 'sentence-list' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Предложения</a>
+          <a href="{% url 'clip-home' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Аудиофрагменты</a>
+          <a href="{% url 'reading-home' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Прочтение</a>
           <a href="{% url 'leaderboard' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Лидерборд</a>
         </nav>
       </div>

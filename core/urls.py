@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 
 from corpus.views import HomeView
 
@@ -18,9 +18,13 @@ urlpatterns = [
         name="login",
     ),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
-    path("sentences/", include("corpus.urls")),
+    path("legacy-sentences/", include("corpus.urls")),
+    path("sentences/", RedirectView.as_view(pattern_name="clip-home"), name="sentence-list"),
+    path("sentences/<int:pk>/", RedirectView.as_view(pattern_name="clip-home")),
     path("leaderboard/", include("gamification.urls")),
     path("editor/", include("editor.urls")),
+    path("clips/", include("clips.urls")),
+    path("reading/", include("reading.urls")),
 ]
 
 if settings.DEBUG:

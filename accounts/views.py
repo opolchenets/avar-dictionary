@@ -62,14 +62,16 @@ def get_user_profile_data(user):
     
     # Данные для графика активности (за последний год)
     one_year_ago = timezone.now() - datetime.timedelta(days=365)
-    activity_data = (
-        TranslationSuggestion.objects.filter(author=user, created_at__gte=one_year_ago)
-        .annotate(date=TruncDate("created_at"))
-        .values("date")
-        .annotate(count=Count("id"))
-        .order_by("date")
-    )
-    
+    from collections import Counter
+    from clips.models import ClipEdit
+    from reading.models import Recording
+    _days = Counter()
+    for q in (ClipEdit.objects.filter(user=user, created_at__gte=one_year_ago),
+              Recording.objects.filter(user=user, created_at__gte=one_year_ago)):
+        for d in q.annotate(date=TruncDate("created_at")).values_list("date", flat=True):
+            _days[d] += 1
+    activity_data = [{"date": d, "count": c} for d, c in sorted(_days.items()) if d]
+
     activity_dict = {item["date"].isoformat() if item["date"] else "": item["count"] for item in activity_data}
     
     # Расчет стриков
@@ -115,6 +117,7 @@ def get_user_profile_data(user):
     return {
         "profile": profile,
         "total_points": accepted_count,
+        **_work_stats(user),
         "translations_count": Sentence.objects.filter(translated_by=user).count(),
         "suggestions_count": TranslationSuggestion.objects.filter(author=user).count(),
         "accepted_suggestions_count": accepted_count,
@@ -124,6 +127,23 @@ def get_user_profile_data(user):
         "max_streak": max_streak,
         "accepted_suggestions": accepted_suggestions_qs,
     }
+
+def _work_stats(user):
+    from django.db.models import Sum
+    from clips.models import ClipEdit
+    from reading.models import Recording
+    e = ClipEdit.objects.filter(user=user)
+    r = Recording.objects.filter(user=user)
+    e_acc, e_j = e.filter(verdict="accepted").count(), e.filter(verdict__in=["accepted", "rejected"]).count()
+    r_acc, r_j = r.filter(status="accepted").count(), r.filter(status__in=["accepted", "rejected"]).count()
+    return {
+        "w_edits": e.count(), "w_edits_acc": e_acc,
+        "w_edits_pct": round(100 * e_acc / e_j) if e_j else None,
+        "w_recs": r.count(),
+        "w_minutes": round((r.filter(status="accepted").aggregate(s=Sum("duration"))["s"] or 0) / 60, 1),
+        "w_recs_pct": round(100 * r_acc / r_j) if r_j else None,
+    }
+
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = "accounts/profile.html"

@@ -7,7 +7,7 @@
   <section class="auth-card">
     <div style="margin-bottom: 2rem;">
       <h1 style="margin: 0; font-size: 2.2rem; color: var(--ink);">Присоединяйтесь</h1>
-      <p class="subtle" style="margin-top: 0.5rem;">Создайте аккаунт, чтобы сохранять свои переводы и зарабатывать очки.</p>
+      <p class="subtle" style="margin-top: 0.5rem;">Создайте аккаунт, чтобы проверять фрагменты и озвучивать фразы.</p>
     </div>
     
     <form method="post" class="stack">
@@ -19,6 +19,12 @@
       {% endif %}
       
       {% for field in form %}
+        {% if field.name == "rights_consent" %}
+        <div style="text-align:left;margin-bottom:1.2rem">
+          <label class="consent">{{ field }} <span>{{ field.label }} <a href="{% url 'rules' %}" target="_blank">Подробнее</a></span></label>
+          {% if field.errors %}<div style="color: var(--danger); font-size: 0.85rem; margin-top: 0.3rem;">{{ field.errors|striptags }}</div>{% endif %}
+        </div>
+        {% else %}
         <div style="text-align: left; margin-bottom: 1.2rem;">
           <label for="{{ field.id_for_label }}" style="display: block; font-weight: 600; margin-bottom: 0.4rem; color: var(--ink);">{{ field.label }}</label>
           {{ field }}
@@ -26,6 +32,7 @@
             <div style="color: var(--danger); font-size: 0.85rem; margin-top: 0.3rem;">{{ field.errors|striptags }}</div>
           {% endif %}
         </div>
+        {% endif %}
       {% endfor %}
       
       <button type="submit" class="button" style="width: 100%; padding: 0.8rem; font-size: 1.1rem; margin-top: 0.5rem;">Зарегистрироваться</button>

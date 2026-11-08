@@ -1,0 +1,1 @@
+{% if p is None %}<span class="leaderboard-meta">—</span>{% else %}<div class="pct"><div class="pct-bar"><span class="{% if p >= 85 %}hi{% elif p >= 60 %}mid{% else %}lo{% endif %}" style="width:{{ p }}%"></span></div><span class="pct-val">{{ p }}%</span></div>{% endif %}

@@ -35,7 +35,7 @@ class District(models.Model):
 
 class UserProfile(models.Model):
     class Role(models.TextChoices):
-        CONTRIBUTOR = "contributor", "Переводчик"
+        CONTRIBUTOR = "contributor", "Участник"
         CO_EDITOR = "co_editor", "Соредактор"
         EDITOR = "editor", "Редактор"
 

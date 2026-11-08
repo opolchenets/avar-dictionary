@@ -12,11 +12,11 @@
       Avar <span style="color: var(--accent);">Corpus</span>
     </h1>
     <p style="font-size: 1.4rem; color: var(--muted); line-height: 1.5; max-width: 600px; margin: 0 auto 4rem; font-weight: 500; animation: fadeInUp 1s ease-out;">
-      Присоединяйтесь к созданию крупнейшего в мире цифрового архива аварского языка. Переводите русские фразы на аварский и помогайте сохранять наследие.
+      Помогите научить компьютер понимать аварскую речь. Слушайте короткие фрагменты, исправляйте черновик расшифровки — и каждый ваш фрагмент станет частью открытого корпуса.
     </p>
     
     <div class="home-hero-actions" style="animation: fadeInUp 1.2s ease-out;">
-      <a href="{% url 'sentence-list' %}" class="button" style="padding: 1.25rem 3.5rem; font-size: 1.2rem; border-radius: 18px;">Начать перевод</a>
+      <a href="{% url 'clip-next' %}" class="button" style="padding: 1.25rem 3.5rem; font-size: 1.2rem; border-radius: 18px;">Начать слушать</a>
       {% if not request.user.is_authenticated %}
         <a href="{% url 'signup' %}" class="button ghost" style="padding: 1.25rem 3.5rem; font-size: 1.2rem; border-radius: 18px;">Создать профиль</a>
       {% endif %}
@@ -26,16 +26,16 @@
   <!-- Section 2: Quick Stats Grid -->
   <section class="home-stats-grid" style="animation: fadeIn 1.5s ease-out;">
     <div class="panel" style="padding: 1.5rem; border-radius: 20px; text-align: center;">
-      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: var(--ink);">{{ sentence_count }}</span>
-      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">Всего фраз</span>
+      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: var(--ink);">{{ clip_total }}</span>
+      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">Всего фрагментов</span>
     </div>
     <div class="panel" style="padding: 1.5rem; border-radius: 20px; text-align: center; border-bottom: 4px solid var(--accent);">
-      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: var(--accent);">{{ translated_count }}</span>
-      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">Переведено</span>
+      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: var(--accent);">{{ clip_done }}</span>
+      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">Готово</span>
     </div>
     <div class="panel" style="padding: 1.5rem; border-radius: 20px; text-align: center;">
-      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: #9d7b00;">{{ pending_count }}</span>
-      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">На проверке</span>
+      <span style="display: block; font-size: 2.2rem; font-weight: 900; color: #9d7b00;">{{ clip_disputed }}</span>
+      <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--muted); letter-spacing: 0.1em;">У редактора</span>
     </div>
     <div class="panel" style="padding: 1.5rem; border-radius: 20px; text-align: center;">
       <span style="display: block; font-size: 2.2rem; font-weight: 900; color: var(--ink);">{{ user_count }}</span>
@@ -45,8 +45,8 @@
 
   <!-- One Big Stat (Pulse) -->
   <div class="big-stat-block" style="animation: fadeIn 1.8s ease-out; margin-bottom: 4rem;">
-    <span class="big-stat-value">{{ translated_count }}</span>
-    <span class="big-stat-label">Всего переведено на аварский</span>
+    <span class="big-stat-value">{{ clip_minutes }}</span>
+    <span class="big-stat-label">минут аварской речи расшифровано</span>
   </div>
 
   <!-- Section 3: Main Dashboard -->
@@ -54,7 +54,7 @@
     
     <div class="stack">
       <!-- Growth Chart -->
-      {% if history_values %}
+      {% if history_values and show_growth %}
       <div class="panel" style="padding: 2.5rem; border-radius: 30px; animation: fadeIn 2s ease-out;">
         <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 2.5rem; font-weight: 900;">Динамика роста корпуса</h3>
         <div style="height: 300px; width: 100%;">
@@ -69,18 +69,18 @@
         <div class="home-how-grid">
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
-            <h4 style="margin-bottom: 0.5rem;">Выбор</h4>
-            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Выбираете фразу на русском языке.</p>
+            <h4 style="margin-bottom: 0.5rem;">Слушаете</h4>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Слушаете фрагмент речи в 2–7 секунд.</p>
           </div>
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">✍️</div>
-            <h4 style="margin-bottom: 0.5rem;">Перевод</h4>
-            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Пишете вариант на аварском языке.</p>
+            <h4 style="margin-bottom: 0.5rem;">Исправляете</h4>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Правите черновик программы так, как сказал диктор.</p>
           </div>
           <div>
             <div style="font-size: 2rem; margin-bottom: 1rem;">✅</div>
             <h4 style="margin-bottom: 0.5rem;">Контроль</h4>
-            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Редактор проверяет и подтверждает.</p>
+            <p style="font-size: 0.85rem; color: var(--muted); line-height: 1.4;">Два человека правят независимо, редактор проверяет и принимает.</p>
           </div>
         </div>
       </div>
@@ -91,11 +91,10 @@
       <div class="panel" style="padding: 2rem; border-radius: 30px; border-left: 6px solid var(--accent);">
         <h3 style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 1.5rem; font-weight: 900;">Живая лента</h3>
         <div style="display: grid; gap: 1rem;">
-          {% for trans in latest_translations %}
+          {% for c in latest_clips %}
             <div style="padding: 1rem; background: var(--bg); border-radius: 12px;">
-              <p style="font-size: 0.9rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--ink);">{{ trans.source_text_ru|truncatechars:60 }}</p>
-              <p style="font-size: 0.85rem; color: var(--muted); margin: 0;">{{ trans.text_av|truncatechars:60 }}</p>
-              <div style="margin-top: 0.6rem; font-size: 0.7rem; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Подтверждено</div>
+              <p style="font-size: 0.95rem; font-weight: 600; margin: 0; color: var(--ink); font-family: var(--serif);">{{ c.final_text|truncatechars:90 }}</p>
+              <div style="margin-top: 0.6rem; font-size: 0.7rem; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Фрагмент #{{ c.pk }} готов</div>
             </div>
           {% empty %}
             <p class="empty-state">Ожидаем первых вкладов...</p>
@@ -104,7 +103,7 @@
       </div>
 
       <!-- Hero of the week -->
-      <div class="panel" style="padding: 2rem; border-radius: 30px; background: var(--ink); color: white; border: none;">
+      <div class="panel" style="padding: 2rem; border-radius: 30px; background: var(--ink-panel); color: white; border: none;">
         <div class="home-top-row" style="margin-bottom: 1.5rem;">
           <h3 style="margin: 0; font-size: 1.1rem; font-weight: 900;">Топ недели</h3>
           <a href="{% url 'leaderboard' %}" style="color: var(--accent); font-weight: 800; text-decoration: none; font-size: 0.8rem;">ВСЕ &rarr;</a>
@@ -113,7 +112,7 @@
           {% for leader in leaders|slice:":3" %}
             <div class="home-top-leader">
               <span style="font-weight: 700; opacity: 0.5;">#{{ forloop.counter }}</span>
-              <span style="flex: 1; margin-left: 1rem; font-weight: 600;">{{ leader.author__profile__display_name|default:leader.author__username }}</span>
+              <span style="flex: 1; margin-left: 1rem; font-weight: 600;">{{ leader.profile__display_name|default:leader.username }}</span>
               <span style="font-weight: 900; color: var(--accent);">{{ leader.total_points }}</span>
             </div>
           {% endfor %}
@@ -133,7 +132,7 @@
       <div class="home-community-features">
         <div style="padding: 1.5rem; background: var(--paper); border-radius: 20px; border: 1px solid var(--line);">
           <h4 style="margin: 0 0 0.5rem; color: var(--accent);">Технологии</h4>
-          <p style="margin: 0; font-size: 0.9rem; color: var(--muted);">Данные станут основой для аварских ИИ-моделей и переводчиков.</p>
+          <p style="margin: 0; font-size: 0.9rem; color: var(--muted);">Данные станут основой для аварских моделей распознавания и синтеза речи.</p>
         </div>
         <div style="padding: 1.5rem; background: var(--paper); border-radius: 20px; border: 1px solid var(--line);">
           <h4 style="margin: 0 0 0.5rem; color: var(--accent);">Сообщество</h4>
@@ -143,7 +142,7 @@
     </div>
 
     <!-- Social Links Card -->
-    <div class="panel" style="padding: 3rem 2rem; border-radius: 40px; background: var(--ink); color: white; border: none; text-align: center;">
+    <div class="panel" style="padding: 3rem 2rem; border-radius: 40px; background: var(--ink-panel); color: white; border: none; text-align: center;">
       <h3 style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 900;">Следите за нами</h3>
       <p style="opacity: 0.7; font-size: 0.95rem; margin-bottom: 2.5rem;">Узнавайте новости проекта и учите аварский в наших соцсетях.</p>
       
@@ -186,7 +185,7 @@
       data: {
         labels: {{ history_labels|safe }},
         datasets: [{
-          label: 'Переведено',
+          label: 'Готовых фрагментов',
           data: {{ history_values|safe }},
           borderColor: '#2e664a',
           backgroundColor: 'rgba(46, 102, 74, 0.05)',

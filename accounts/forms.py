@@ -15,6 +15,12 @@ class SimpleSignUpForm(UserCreationForm):
         empty_label="Выберите район...",
     )
 
+    rights_consent = forms.BooleanField(
+        required=True,
+        label="Я согласен(на), что мои записи и правки станут частью общего корпуса «Авар МацӀ» и проект сможет свободно использовать их для развития аварского языка — обучать модели, делиться с исследователями и партнёрами.",
+        error_messages={"required": "Чтобы участвовать, отметьте согласие."},
+    )
+
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ("username", "district")

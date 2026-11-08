@@ -1,50 +1,36 @@
 {% extends "base.html" %}
-
-{% block title %}Правила перевода — Avar Corpus{% endblock %}
-
+{% block title %}Правила — Avar Corpus{% endblock %}
 {% block content %}
-<div style="max-width: 720px; margin: 2rem auto; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 3rem; box-shadow: var(--shadow);">
-  <h1 style="margin-top: 0; font-size: 2.2rem; color: var(--ink); margin-bottom: 0.5rem;">Правила перевода</h1>
-  <p style="color: var(--muted); font-size: 1.1rem; line-height: 1.5; margin-bottom: 2.5rem;">Краткое руководство по переводу русского текста на аварский язык.</p>
+<div class="panel rules" style="max-width:760px;margin:0 auto;padding:2.5rem">
+  <h1>Правила</h1>
+  <p class="lead">Мы собираем аварскую речь с точной расшифровкой, чтобы научить компьютер понимать и говорить по-аварски. Работа бывает двух видов: <b>проверка аудиофрагментов</b> и <b>прочтение</b>.</p>
 
-  <section style="margin-bottom: 2.5rem;">
-    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">1. Система статусов</h2>
-    <p style="line-height: 1.6; margin-bottom: 1rem;">Каждое предложение имеет цветовой бейдж, отражающий его состояние:</p>
-    <ul style="list-style: none; padding: 0; display: grid; gap: 1rem;">
-      <li style="display: flex; gap: 1rem; align-items: flex-start;">
-        <span style="border-radius: 999px; background: rgba(220, 53, 69, 0.1); color: var(--danger); padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">Свободно</span>
-        <span style="line-height: 1.4;">Никто еще не предложил перевод. Вы можете стать первым!</span>
-      </li>
-      <li style="display: flex; gap: 1rem; align-items: flex-start;">
-        <span style="border-radius: 999px; background: rgba(255, 193, 7, 0.15); color: #9d7b00; padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">На проверке</span>
-        <span style="line-height: 1.4;">Есть варианты перевода, ожидающие одобрения редактора. Вы можете добавить свою версию.</span>
-      </li>
-      <li style="display: flex; gap: 1rem; align-items: flex-start;">
-        <span style="border-radius: 999px; background: rgba(40, 167, 69, 0.15); color: var(--success); padding: 0.3rem 0.7rem; font-size: 0.8rem; font-weight: 700; white-space: nowrap; min-width: 120px; text-align: center;">Переведено</span>
-        <span style="line-height: 1.4;">Перевод проверен и принят. Предложение закрыто.</span>
-      </li>
-    </ul>
-  </section>
+  <div class="rights-box">
+    <b>Ваш вклад — в общий корпус.</b> Всё, что вы отправляете — записи и правки, — становится частью общего корпуса аварского языка. Проект сможет свободно использовать эти материалы, чтобы язык жил в цифровом мире: обучать модели распознавания и синтеза речи, делиться данными с исследователями и партнёрами. Если вам это не подходит, просто не отправляйте материалы.
+  </div>
 
-  <section style="margin-bottom: 2.5rem;">
-    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">2. Рейтинг и баллы</h2>
-    <p style="line-height: 1.6; margin-bottom: 1rem;">
-      За каждый <strong>принятый редактором</strong> вариант перевода на аварский язык вы получаете <strong>1 балл</strong> в общем рейтинге.
-    </p>
-  </section>
+  <h2>1. Аудиофрагменты — проверка текста</h2>
+  <ul>
+    <li>Вы слушаете короткий фрагмент (2–7 секунд). Под ним — черновик, который написала программа.</li>
+    <li>Исправьте его <b>так, как сказал диктор</b>, а не как «правильно» или как в книге. Если диктор оговорился — пишите оговорку.</li>
+    <li>Числа пишите словами. Если речи нет или ничего не разобрать — напишите <b>#</b>.</li>
+    <li>Каждый фрагмент независимо правят два человека. Совпали — правки приняты, разошлись — фрагмент проверяет редактор.</li>
+  </ul>
 
-  <section>
-    <h2 style="font-size: 1.4rem; color: var(--accent); border-bottom: 1px solid var(--line); padding-bottom: 0.5rem; margin-bottom: 1rem;">3. Автоматическая палочка (Ӏ)</h2>
-    <p style="line-height: 1.6; margin-bottom: 1rem;">
-      Так как в аварском языке активно используется кириллическая палочка <strong>Ӏ</strong> (U+04C0), которой нет на клавиатуре, мы добавили <strong>автозамену</strong>. 
-    </p>
-    <p style="line-height: 1.6; margin-bottom: 1rem;">
-      После букв <strong>г, к, т, х, ц, ч</strong> следующие символы заменятся на <strong>Ӏ</strong> автоматически:
-    </p>
-    <div style="background: var(--soft); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1rem; display: flex; gap: 1.5rem; font-family: monospace; font-size: 1.2rem; justify-content: center;">
-      <span>|</span> <span>l</span> <span>I</span> <span>1</span> <span>!</span>
-    </div>
-  </section>
+  <h2>2. Прочтение — озвучка</h2>
+  <ul>
+    <li>Вам показывают фразу из книги, у которой нет озвучки. Нажмите «Записать», прочитайте вслух, прослушайте и отправьте.</li>
+    <li>Читайте спокойно, в тишине, на расстоянии ладони от микрофона. Можно перезаписывать сколько угодно раз до отправки.</li>
+    <li>Редактор прослушивает запись: <span class="status verdict-accepted">Принята</span>, <span class="status verdict-redo">Нужно переозвучить</span> — это второй шанс, а не штраф, — или <span class="status verdict-rejected">Отклонена</span>.</li>
+    <li>Перед первой записью нужно отметить согласие (см. выше).</li>
+  </ul>
 
+  <h2>3. Рейтинг</h2>
+  <p>В рейтинге видно, сколько правок у вас принято и сколько минут озвучки принято, а также процент принятых работ в каждом виде. Место в рейтинге зависит и от количества, и от точности: аккуратная работа ценится выше быстрой.</p>
+
+  <h2>4. Палочка (Ӏ)</h2>
+  <p>В аварском используется палочка <b>Ӏ</b>, которой нет на клавиатуре. Её можно поставить кнопкой <b>Ӏ</b> над полем или клавишами <kbd>Alt</kbd>+<kbd>1</kbd>. А ещё после букв <b>г, к, л, т, х, ц, ч</b> символы</p>
+  <div class="pal-demo"><span>l</span><span>I</span><span>1</span><span>і</span></div>
+  <p>автоматически превращаются в <b>Ӏ</b>.</p>
 </div>
 {% endblock %}

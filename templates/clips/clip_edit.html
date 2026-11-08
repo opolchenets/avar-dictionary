@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Фрагмент #{{ clip.pk }} — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <div class="section-head">
+    <div>
+      <p class="eyebrow"><a href="{% url 'clip-home' %}">← Фрагменты</a></p>
+      <h1>Фрагмент #{{ clip.pk }}</h1>
+    </div>
+    {% if mine %}<span class="status pending">Вы уже правили — можно изменить</span>{% endif %}
+  </div>
+
+  <div class="panel clip-player">
+    <audio id="clipAudio" src="{{ clip.audio.url }}" controls preload="auto"></audio>
+    <div class="action-row">
+      <button type="button" class="button subtle small-button" onclick="play(1)">▶ Слушать <kbd>Ctrl+Space</kbd></button>
+      <button type="button" class="button subtle small-button" onclick="play(0.75)">🐢 Медленно</button>
+    </div>
+  </div>
+
+  {% if locked %}
+    <div class="panel"><p>Этот фрагмент уже закрыт.</p>
+      <a class="button" href="{% url 'clip-next' %}">Следующий →</a></div>
+  {% else %}
+  <form method="post" class="panel">
+    {% csrf_token %}
+    <label for="clipText">Что сказал диктор (исправьте черновик)</label>
+    <div class="pal-bar">
+      <button type="button" class="small-button button subtle" onclick="ins('Ӏ')" title="Палочка">Ӏ</button>
+      <span class="mod-info-label">Палочка: кнопка или клавиша <kbd>Alt+1</kbd></span>
+    </div>
+    <textarea id="clipText" name="text" class="clip-text" rows="3" autofocus>{{ text }}</textarea>
+    <p class="helptext">Пишите как произнесено, а не как «правильно». Числа — словами. Если речи нет или ничего не разобрать — напишите <b>#</b>.</p>
+    <div class="action-row action-row--between">
+      <button type="submit" name="action" value="skip" class="button subtle">Пропустить</button>
+      <button type="submit" name="action" value="save" class="button">Сохранить и дальше <kbd>Ctrl+Enter</kbd></button>
+    </div>
+  </form>
+  {% endif %}
+</div>
+<script>
+const a=document.getElementById('clipAudio'), t=document.getElementById('clipText');
+function play(r){a.playbackRate=r;a.currentTime=0;a.play();}
+function ins(s){if(!t)return;const i=t.selectionStart;t.value=t.value.slice(0,i)+s+t.value.slice(t.selectionEnd);t.selectionStart=t.selectionEnd=i+s.length;t.focus();}
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.code==='Space'){e.preventDefault();a.paused?play(a.playbackRate||1):a.pause();}
+  if(e.ctrlKey&&e.key==='Enter'&&t){e.preventDefault();t.form.querySelector('[value=save]').click();}
+  if(e.altKey&&e.key==='1'){e.preventDefault();ins('Ӏ');}
+});
+// автозамена палочки: г к л т х ц ч + l I 1 і → Ӏ
+t&&t.addEventListener('input',()=>{const p=t.selectionStart,v=t.value.replace(/([гклтхцчГКЛТХЦЧ])[lI1іІӏ]/g,'$1Ӏ');if(v!==t.value){t.value=v;t.selectionStart=t.selectionEnd=p;}});
+a&&a.addEventListener('canplay',()=>{a.play().catch(()=>{});},{once:true});
+</script>
+{% endblock %}

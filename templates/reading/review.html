@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Проверка озвучек — Avar Corpus{% endblock %}
+{% block content %}
+<div class="stack">
+  <div class="section-head"><div><p class="eyebrow">Редактор</p><h1>Проверка озвучек</h1></div>
+    <a class="button ghost" href="{% url 'clip-review' %}">Проверка текста →</a></div>
+  <div class="category-tabs">
+    <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="?status=pending">Ждут проверки ({{ counts.pending }})</a>
+    <a class="category-tab {% if status == 'redo' %}is-active{% endif %}" href="?status=redo">На переозвучке ({{ counts.redo }})</a>
+    <a class="category-tab {% if status == 'accepted' %}is-active{% endif %}" href="?status=accepted">Приняты ({{ counts.accepted }})</a>
+    <a class="category-tab {% if status == 'rejected' %}is-active{% endif %}" href="?status=rejected">Отклонены ({{ counts.rejected }})</a>
+  </div>
+  {% for r in recs %}
+  <div class="panel">
+    <div class="panel-title"><span class="workspace-number">#{{ r.pk }} · {{ r.user.profile.display_name|default:r.user.username }} · {{ r.duration|floatformat:1 }} с{% if r.attempts > 1 %} · попытка {{ r.attempts }}{% endif %}</span>
+      <span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
+    <p class="read-text" style="font-size:1.1rem">{{ r.prompt.text }}</p>
+    <audio src="{{ r.audio.url }}" controls preload="none" style="width:100%"></audio>
+    <form method="post" action="{% url 'reading-verdict' r.pk %}" class="action-row">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <input type="text" name="note" placeholder="Комментарий (для переозвучки)" value="{{ r.note }}" style="flex:1 1 220px">
+      <button type="submit" name="verdict" value="accepted" class="button small-button">✓ Принять</button>
+      <button type="submit" name="verdict" value="redo" class="button small-button subtle">↻ Переозвучить</button>
+      <button type="submit" name="verdict" value="rejected" class="button small-button danger">✗ Отклонить</button>
+    </form>
+  </div>
+  {% empty %}<p class="empty-state">Здесь пусто.</p>{% endfor %}
+</div>
+{% endblock %}

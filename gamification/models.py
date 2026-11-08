@@ -44,6 +44,7 @@ class PointLedger(models.Model):
         FIRST_TRANSLATION = "first_translation", "Первый перевод"
         SUGGESTION_SUBMITTED = "suggestion_submitted", "Предложена правка"
         SUGGESTION_ACCEPTED = "suggestion_accepted", "Правка принята"
+        CLIP_ACCEPTED = "clip_accepted", "Правка фрагмента принята"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -61,6 +62,13 @@ class PointLedger(models.Model):
     )
     suggestion = models.ForeignKey(
         "suggestions.TranslationSuggestion",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="point_entries",
+    )
+    clip = models.ForeignKey(
+        "clips.Clip",
         on_delete=models.CASCADE,
         null=True,
         blank=True,
