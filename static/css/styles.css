@@ -200,3 +200,6 @@ button.button.danger,a.button.danger{background:var(--bad);border-color:var(--ba
 
 .rights-box{background:var(--warn-bg);color:var(--text);border-left:4px solid var(--warn);border-radius:10px;padding:14px 16px;margin:1rem 0 .5rem;line-height:1.55}
 .consent span{line-height:1.45}
+
+.kind{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:700;margin-right:6px}
+.kind-gold{background:var(--warn-bg);color:var(--warn)} .kind-new{background:color-mix(in srgb,var(--accent) 15%,transparent);color:var(--accent)}

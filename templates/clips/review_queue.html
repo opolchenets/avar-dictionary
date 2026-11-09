@@ -19,7 +19,11 @@
   <div class="panel" id="clip-{{ c.pk }}">
     <div class="panel-title">
       <span class="workspace-number">#{{ c.pk }} · {{ c.batch.name }} · {{ c.duration|floatformat:1 }} с</span>
-      <span class="status {{ c.status }}">{% if c.is_gold %}контрольный{% else %}{{ c.get_status_display }}{% endif %}</span>
+      <span>
+        {% if c.is_gold %}<span class="kind kind-gold">Проверочный · ответ известен</span>
+        {% else %}<span class="kind kind-new">Новый · для набора данных</span>
+        <span class="status {{ c.status }}">{{ c.get_status_display }}</span>{% endif %}
+      </span>
     </div>
     <audio src="{{ c.audio.url }}" controls preload="none" style="width:100%"></audio>
     <div class="info-rows" style="margin-top:10px">
