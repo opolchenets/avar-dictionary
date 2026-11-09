@@ -1,0 +1,23 @@
+# Caddy перед сайтом: HTTPS-сертификат Let's Encrypt выписывается и продлевается сам.
+# Запуск: docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./media:/srv/media:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:

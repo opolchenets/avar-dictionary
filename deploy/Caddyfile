@@ -1,0 +1,23 @@
+{$SITE_DOMAIN} {
+	encode gzip
+
+	request_body {
+		max_size 30MB
+	}
+
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+	}
+
+	# Аудио (фрагменты и записи участников) отдаёт сам Caddy
+	handle_path /media/* {
+		root * /srv/media
+		file_server
+	}
+
+	# Всё остальное — Django (gunicorn)
+	handle {
+		reverse_proxy web:8000
+	}
+}
