@@ -1,0 +1,12 @@
+{$SITE_DOMAIN} {
+    encode gzip
+    request_body {
+        max_size 11MB
+    }
+    header {
+        -Server
+        X-Content-Type-Options nosniff
+    }
+    # All media goes through Django authentication and permissions.
+    reverse_proxy web:8000
+}

@@ -21,7 +21,7 @@ __pycache__/
 
 # C extensions
 *.so
-migrations/
+# Application migrations are versioned.
 # Distribution / packaging
 .Python
 build/
@@ -139,6 +139,10 @@ celerybeat.pid
 
 # Environments
 .env
+transfer/
+backups/
+tmp*/
+*.tar.gz
 .venv
 env/
 venv/

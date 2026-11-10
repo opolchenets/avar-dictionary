@@ -1,103 +1,39 @@
-# Avar Dictionary
+# Авар МацӀ — сбор аварского корпуса
 
-Avar Dictionary is an open source project that collects and publishes Avar language resources. The repository contains a web application and REST API built with Django and Django REST Framework. It includes three major components:
+Django-сайт исправления расшифровок и записи фраз. Два независимых ответа сравниваются автоматически; спорные работы проверяет редактор. Контрольные материалы оцениваются по эталону. Для озвучки доступны принятие, переозвучка и отклонение.
 
-- **Dictionary** – words with translations, usage examples and synonyms
-- **Phrasebook** – practical phrases grouped by topic with transliteration
-- **Grammar articles** – short explanations of grammar and language features
+## Локальный запуск
 
-The goal is to provide an easily accessible reference for learners and researchers while offering an API that can power other software. All data is openly licensed so that search engines and language models can index and reuse these materials.
+PowerShell, существующее окружение Anaconda base:
 
-## Features
-
-- Full text search with filters by language and part of speech
-- Detailed word pages with translations, examples and synonyms
-- Quick translation endpoint to convert words between languages
-- Phrasebook pages for everyday expressions
-- Grammar articles organized by topic
-- Admin interface with import/export through `django-import-export`
-- Swagger/OpenAPI documentation available at `/api/docs/`
-
-## Quick start with Docker
-
-1. Copy the example environment file and adjust the values if needed:
-   ```bash
-   cp .env.example .env
-   ```
-2. Build the containers and start the stack:
-   ```bash
-   docker compose up --build
-   ```
-
-The Docker configuration uses PostgreSQL by default. The application will be available at `http://localhost:8000/` once the migrations finish.
-
-## Local installation
-
-1. Install Python 3.12 and create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Apply migrations and start the development server:
-   ```bash
-   python manage.py migrate
-   python manage.py runserver
-   ```
-
-## Repository structure
-
-- `api/` – Django project configuration
-- `dictionary/` – models and views for dictionary entries
-- `phrasebook/` – models and views for the phrasebook
-- `grammar/` – models and views for grammar articles
-- `website/` – templates and static files
-- `docker-compose.yml` and `Dockerfile` – container setup
-
-## Example API requests
-
-- List words: `GET /api/dictionary/words/`
-- Search a word: `GET /api/dictionary/search/?q=word`
-- Quick translation: `GET /api/dictionary/translate/?word=hello&from=en&to=av`
-- Phrasebook entries: `GET /api/phrasebook/phrases/`
-- Grammar articles: `GET /api/grammar/articles/`
-
-A complete list of endpoints is available through Swagger UI (`/api/docs/`).
-
-## Serving static files with Nginx
-
-In production you will usually proxy requests through Nginx (or a similar web server) while it serves the collected static assets directly from disk or object storage. This project supports both approaches:
-
-- **Whitenoise** – enabled by default and useful for simple deployments where Gunicorn can serve static assets itself. Set `DJANGO_USE_WHITENOISE=False` in the environment to disable it.
-- **External web server** – when Whitenoise is disabled run `python manage.py collectstatic` (the provided Docker entrypoint already does this) and point Nginx at the resulting `staticfiles` directory.
-
-The repository includes a sample configuration at `docker/nginx/default.conf`. Copy it to your server (for example `/etc/nginx/conf.d/avar.conf`), adjust the `server_name` and update the upstream host if Gunicorn listens on another address or port. Make sure the `alias` path matches the directory where you publish the collected static files, e.g. `/var/www/avar/static/`.
-
-```nginx
-location /static/ {
-    alias /var/www/avar/static/;
-    access_log off;
-    add_header Cache-Control "public, max-age=31536000, immutable";
-}
-
-location / {
-    proxy_pass http://127.0.0.1:8000;
-    include proxy_params;
-}
+```powershell
+conda activate base
+Set-Location -LiteralPath "C:\Users\Grinblast Georald\OneDrive\Рабочий стол\авар\site\avar-test"
+python manage.py site_preflight
+python manage.py check
+python manage.py migrate --check
+python manage.py runserver 127.0.0.1:8000
 ```
 
-## Use cases
+Открыть http://127.0.0.1:8000/. Код, db.sqlite3 и media должны принадлежать одному экземпляру. Код из GitHub не содержит рабочую базу и аудио.
 
-The project can serve as:
+## Сервер
 
-- An online resource for students and teachers
-- A data source for mobile apps and other services via the REST API
-- A foundation for an extensible electronic dictionary that can import existing datasets
+Порядок — [deploy/README.md](deploy/README.md). Основной файл — docker-compose.production.yml. Caddy открывается профилем public после переноса данных и смены тестовых паролей. FFmpeg устанавливается в серверный образ, существующая Anaconda не меняется.
 
-## Licensing
+## Проверки
 
-The source code is distributed under the terms of the MIT License. Dictionary data and other textual content are provided under the Creative Commons Attribution 4.0 International (CC BY 4.0) license. This allows reuse in search engines, academic research and training language models.
+```powershell
+python manage.py test --noinput
+python manage.py makemigrations --check --dry-run
+```
 
+Миграции приложений хранятся в Git. При старте только migrate; не создавать миграции автоматически для починки неизвестной базы.
+
+## Данные
+
+instance_transfer export DIRECTORY — база и media с контрольными суммами; записи на время экспорта остановить.
+instance_transfer import DIRECTORY — только в пустой подготовленный экземпляр.
+export_corpus DIRECTORY — CSV принятых расшифровок, эталонов и озвучек без учётных данных.
+
+База, записи участников, пакеты переноса и секреты не публикуются в репозитории.

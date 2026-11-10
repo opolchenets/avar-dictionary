@@ -1,3 +1,6 @@
+from django.db import transaction
+from corpus.views import get_safe_redirect
+from .audio_validation import validate_audio
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.files.base import ContentFile
@@ -53,7 +56,7 @@ class NextPromptView(LoginRequiredMixin, View):
 
 class RecordView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        prompt = get_object_or_404(Prompt, pk=pk)
+        prompt = get_object_or_404(Prompt, pk=pk, is_active=True)
         mine = Recording.objects.filter(prompt=prompt, user=request.user).first()
         locked = mine is not None and mine.status != Recording.Status.REDO
         return render(request, "reading/record.html", {
@@ -61,32 +64,42 @@ class RecordView(LoginRequiredMixin, View):
             "need_consent": not Consent.objects.filter(user=request.user).exists()})
 
     def post(self, request, pk):
-        prompt = get_object_or_404(Prompt, pk=pk)
+        prompt = get_object_or_404(Prompt, pk=pk, is_active=True)
         if not Consent.objects.filter(user=request.user).exists():
             if request.POST.get("consent") != "1":
                 return JsonResponse({"error": "Нужно согласие"}, status=400)
             Consent.objects.create(user=request.user)
-        f = request.FILES.get("audio")
-        if not f or f.size < 2000:
-            return JsonResponse({"error": "Запись пустая"}, status=400)
         try:
-            dur = min(float(request.POST.get("duration", 0)), MAX_SECONDS)
-        except ValueError:
-            dur = 0
-        rec = Recording.objects.filter(prompt=prompt, user=request.user).first()
-        if rec and rec.status != Recording.Status.REDO:
-            return JsonResponse({"error": "Эта фраза уже озвучена"}, status=400)
-        ct = f.content_type or ""
-        ext = next((e for k, e in (("webm", "webm"), ("ogg", "ogg"), ("mp4", "m4a"), ("aac", "m4a"), ("wav", "wav")) if k in ct), "webm")
-        if rec:
-            rec.audio.delete(save=False)
-            rec.attempts += 1
-            rec.status, rec.note, rec.reviewed_by, rec.reviewed_at = Recording.Status.PENDING, "", None, None
-        else:
-            rec = Recording(prompt=prompt, user=request.user)
-        rec.duration = dur
-        rec.audio.save(f"{prompt.pk}_{request.user.pk}.{ext}", ContentFile(f.read()), save=False)
-        rec.save()
+            content, dur, ext = validate_audio(request.FILES.get("audio"), request.POST.get("duration"))
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=400)
+        new_name = None
+        storage = Recording._meta.get_field("audio").storage
+        try:
+            with transaction.atomic():
+                # Serialize submissions and editorial decisions for this phrase.
+                Prompt.objects.select_for_update().get(pk=prompt.pk)
+                rec = Recording.objects.filter(prompt=prompt, user=request.user).first()
+                if rec and rec.status != Recording.Status.REDO:
+                    return JsonResponse({"error": "Эта фраза уже озвучена"}, status=400)
+                if not rec and Recording.objects.filter(prompt=prompt, status__in=["accepted", "pending"]).exists():
+                    return JsonResponse({"error": "Эту фразу уже отправили на проверку. Выберите следующую."}, status=409)
+                old_name = rec.audio.name if rec else None
+                if rec:
+                    rec.attempts += 1
+                    rec.status, rec.note, rec.reviewed_by, rec.reviewed_at = Recording.Status.PENDING, "", None, None
+                else:
+                    rec = Recording(prompt=prompt, user=request.user)
+                rec.duration = dur
+                rec.audio.save(f"{prompt.pk}_{request.user.pk}.{ext}", ContentFile(content), save=False)
+                new_name = rec.audio.name
+                rec.save()
+                if old_name and old_name != new_name:
+                    transaction.on_commit(lambda name=old_name: storage.delete(name))
+        except Exception:
+            if new_name:
+                storage.delete(new_name)
+            raise
         n = Recording.objects.filter(user=request.user).count()
         messages.success(request, f"Запись отправлена на проверку. Вы озвучили фраз: {n}.")
         return JsonResponse({"next": reverse("reading-next")})
@@ -115,11 +128,14 @@ class VerdictView(UserPassesTestMixin, View):
     def test_func(self):
         return is_editor(self.request.user)
 
+    @transaction.atomic
     def post(self, request, pk):
         rec = get_object_or_404(Recording, pk=pk)
+        Prompt.objects.select_for_update().get(pk=rec.prompt_id)
+        rec.refresh_from_db()
         v = request.POST.get("verdict")
         if v in ("accepted", "redo", "rejected"):
             rec.status, rec.note = v, request.POST.get("note", "")[:255]
             rec.reviewed_by, rec.reviewed_at = request.user, timezone.now()
             rec.save(update_fields=["status", "note", "reviewed_by", "reviewed_at", "updated_at"])
-        return redirect(request.POST.get("next") or "reading-review")
+        return redirect(get_safe_redirect(request, reverse("reading-review")))

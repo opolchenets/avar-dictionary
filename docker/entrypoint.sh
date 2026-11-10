@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -o errexit
 set -o nounset
 set -o pipefail
@@ -27,13 +27,12 @@ PY
   echo "PostgreSQL is available"
 fi
 
-python manage.py makemigrations
+python manage.py check --deploy --fail-level WARNING
 
 echo "Applying database migrations"
 python manage.py migrate --noinput
 
-echo "Seeding initial corpus data"
-python manage.py seed_initial_data
+
 
 echo "Collecting static files"
 python manage.py collectstatic --noinput
