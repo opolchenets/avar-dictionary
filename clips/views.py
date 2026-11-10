@@ -1,3 +1,4 @@
+from corpus.views import get_safe_redirect
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.db.models import Count, Q, Sum
@@ -47,7 +48,7 @@ class NextClipView(LoginRequiredMixin, View):
 
 class ClipEditView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        clip = get_object_or_404(Clip, pk=pk)
+        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
         mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
         # править можно только открытый фрагмент; после решения (совпало / редактор) правка закрыта
         locked = clip.status != Clip.Status.OPEN or (mine is not None and mine.verdict != ClipEdit.Verdict.PENDING)
@@ -57,7 +58,7 @@ class ClipEditView(LoginRequiredMixin, View):
         })
 
     def post(self, request, pk):
-        clip = get_object_or_404(Clip, pk=pk)
+        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
         text = request.POST.get("text", "").strip()
         if request.POST.get("action") == "skip":
             return redirect("clip-next")
@@ -68,7 +69,10 @@ class ClipEditView(LoginRequiredMixin, View):
         if clip.status != Clip.Status.OPEN or (mine and mine.verdict != ClipEdit.Verdict.PENDING):
             messages.info(request, "Этот фрагмент уже закрыт.")
             return redirect("clip-next")
-        submit_edit(clip, request.user, text)
+        result, _ = submit_edit(clip, request.user, text)
+        if result == "closed":
+            messages.info(request, "Этот фрагмент уже закрыт.")
+            return redirect("clip-next")
         n = ClipEdit.objects.filter(user=request.user).count()
         messages.success(request, f"Сохранено. Вы проверили фрагментов: {n}.")
         return redirect("clip-next")
@@ -110,9 +114,9 @@ class ResolveView(UserPassesTestMixin, View):
         return is_editor(self.request.user)
 
     def post(self, request, pk):
-        clip = get_object_or_404(Clip, pk=pk)
+        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
         text = request.POST.get("text", "").strip()
-        back = request.POST.get("next") or reverse("clip-review")
+        back = get_safe_redirect(request, reverse("clip-review"))
         if not text:
             return redirect(back)
         m = matching_edit(clip, text)
@@ -140,4 +144,4 @@ class VerdictView(UserPassesTestMixin, View):
         elif v == ClipEdit.Verdict.REJECTED:
             set_verdict(edit, v, request.user)
         request.session.pop("clip_suggest", None)
-        return redirect(request.POST.get("next") or "clip-review")
+        return redirect(get_safe_redirect(request, reverse("clip-review")))

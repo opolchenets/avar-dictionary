@@ -21,6 +21,7 @@ class SignUpTests(TestCase):
             {
                 "username": "translator",
                 "district": self.district.pk,
+                "rights_consent": True,
                 "password1": "Strong-pass123",
                 "password2": "Strong-pass123",
             },

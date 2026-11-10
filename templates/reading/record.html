@@ -55,8 +55,10 @@ $('btnSend').onclick=async()=>{
   $('btnSend').disabled=true;const fd=new FormData();
   fd.append('audio',blob,'rec.webm');fd.append('duration',dur.toFixed(2));if(c)fd.append('consent','1');
   fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
-  const r=await fetch('',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));
-  if(r.ok&&j.next)location.href=j.next;else{err(j.error||'Ошибка отправки');$('btnSend').disabled=false;}
+  try {
+    const r=await fetch('',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.next)location.href=j.next;else{err(j.error||'Ошибка отправки. Запись сохранена в этой вкладке — попробуйте снова.');$('btnSend').disabled=false;}
+  } catch(e) {err('Нет связи с сервером. Запись сохранена в этой вкладке — повторите отправку.');$('btnSend').disabled=false;}
 };
 </script>
 {% endif %}

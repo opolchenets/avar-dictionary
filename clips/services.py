@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from gamification.models import PointLedger
 
-from common.normalizer import char_errors, similarity
+from common.normalizer import char_errors, similarity, fix_palochka
 
 from .models import Clip, ClipEdit, gold_is_correct, texts_match
 
@@ -21,7 +21,9 @@ def next_clip_for(user):
     return qs.order_by("?").first()
 
 
+@transaction.atomic
 def set_verdict(edit, verdict, by=None):
+    Clip.objects.select_for_update().get(pk=edit.clip_id)
     edit.verdict = verdict
     edit.reviewed_by, edit.reviewed_at = by, timezone.now()
     edit.save(update_fields=["verdict", "reviewed_by", "reviewed_at"])
@@ -35,6 +37,10 @@ def set_verdict(edit, verdict, by=None):
 @transaction.atomic
 def submit_edit(clip, user, text):
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
+    existing = ClipEdit.objects.filter(clip=clip, user=user).first()
+    if not clip.batch.is_open or clip.status != Clip.Status.OPEN or (existing and existing.verdict != ClipEdit.Verdict.PENDING):
+        return "closed", existing
+    text = fix_palochka(text.strip())
     edit, _ = ClipEdit.objects.update_or_create(
         clip=clip, user=user,
         defaults={"text": text.strip(), "verdict": ClipEdit.Verdict.PENDING, "reviewed_by": None, "reviewed_at": None})
@@ -61,10 +67,11 @@ def submit_edit(clip, user, text):
     return "saved", edit
 
 
+@transaction.atomic
 def accept_edit(edit, by):
     """Редактор выбрал вариант правщика: он — итог; совпадающие с ним правки приняты, остальные отклонены."""
-    clip = edit.clip
-    clip.final_text, clip.status = edit.text, Clip.Status.RESOLVED
+    clip = Clip.objects.select_for_update().get(pk=edit.clip_id)
+    clip.final_text, clip.status = fix_palochka(edit.text), Clip.Status.RESOLVED
     clip.save(update_fields=["final_text", "status", "updated_at"])
     for e in clip.edits.all():
         set_verdict(e, ClipEdit.Verdict.ACCEPTED if (e.pk == edit.pk or texts_match(e.text, edit.text))
@@ -75,9 +82,11 @@ def matching_edit(clip, text):
     return next((e for e in clip.edits.select_related("user") if texts_match(e.text, text)), None)
 
 
+@transaction.atomic
 def resolve(clip, text, by=None):
     """Редактор вписал свой текст: итог — его текст, все правки отклонены (совпадающие сюда не доходят)."""
-    clip.final_text, clip.status = text.strip(), Clip.Status.RESOLVED
+    clip = Clip.objects.select_for_update().get(pk=clip.pk)
+    clip.final_text, clip.status = fix_palochka(text.strip()), Clip.Status.RESOLVED
     clip.save(update_fields=["status", "final_text", "updated_at"])
     for e in clip.edits.all():
         set_verdict(e, ClipEdit.Verdict.ACCEPTED if texts_match(e.text, text) else ClipEdit.Verdict.REJECTED, by)

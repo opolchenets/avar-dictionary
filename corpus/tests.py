@@ -43,7 +43,7 @@ class CorpusFlowTests(TestCase):
         self.assertEqual(self.sentence.status, Sentence.Status.PENDING)
         self.assertEqual(self.sentence.text_av, "")
         suggestion = TranslationSuggestion.objects.get(sentence=self.sentence)
-        self.assertEqual(suggestion.proposed_text_av, "ТIехь")
+        self.assertEqual(suggestion.proposed_text_av, "ТӀехь.")
 
     def test_existing_translation_creates_suggestion(self):
         other_user = User.objects.create_user(username="other", password="Strong-pass123")
@@ -60,8 +60,7 @@ class CorpusFlowTests(TestCase):
 
         self.sentence.refresh_from_db()
         self.assertEqual(self.sentence.text_av, "ТIехь")
-        suggestion = TranslationSuggestion.objects.get(sentence=self.sentence, proposed_text_av="ТIехьча")
-        self.assertEqual(suggestion.proposed_text_av, "ТIехьча")
+        self.assertFalse(TranslationSuggestion.objects.filter(sentence=self.sentence).exists())
 
     def test_sentence_list_shows_pending_suggestions(self):
         other_user = User.objects.create_user(username="other", password="Strong-pass123")
@@ -74,7 +73,7 @@ class CorpusFlowTests(TestCase):
             proposed_text_av="Вариант",
             author=other_user,
         )
-        response = self.client.get(reverse("sentence-list"))
+        response = self.client.get("/legacy-sentences/")
         self.assertContains(response, "Другие предложенные варианты")
         self.assertContains(response, "Вариант")
 
@@ -89,12 +88,12 @@ class CorpusFlowTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("sentence-list"))
+        self.assertRedirects(response, reverse("clip-home"))
 
     def test_duplicate_suggestion_is_rejected(self):
         TranslationSuggestion.objects.create(
             sentence=self.sentence,
-            proposed_text_av="ТIехь",
+            proposed_text_av="ТӀехь.",
             author=self.user,
         )
         self.client.login(username="user", password="Strong-pass123")
@@ -106,4 +105,4 @@ class CorpusFlowTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         form = response.context["form"]
-        self.assertIn("Такой вариант уже предложен", form.errors["text_av"][0])
+        self.assertIn("Вы уже предложили точно такой же вариант", form.errors["text_av"][0])
