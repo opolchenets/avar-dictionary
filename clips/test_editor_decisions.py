@@ -71,7 +71,7 @@ class EditorDecisionTests(TestCase):
         self.assertEqual(self.displayed_ids(self.page("accepted")), {edit.pk})
         self.assertEqual(self.displayed_ids(self.page("accepted", "gold")), {edit.pk})
         self.assertEqual(self.displayed_ids(self.page("accepted", "new")), set())
-        self.assertEqual(user_stats(self.first), {"total": 1, "accepted": 1, "rejected": 0, "pending": 0})
+        self.assertEqual(user_stats(self.first), {"total": 1, "accepted": 1, "rejected": 0, "redo": 0, "pending": 0})
 
     def test_rejected_control_moves_and_can_be_accepted_later(self):
         _, edit = submit_edit(self.gold, self.first, "incorrect")

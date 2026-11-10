@@ -49,6 +49,19 @@
   {% endif %}
 
   {% if request.user.is_authenticated %}
+  {% if redo_edits %}
+  <div class="panel">
+    <h2>Нужно исправить ({{ my.redo }})</h2>
+    <p>Редактор вернул эти работы на доработку. Это не отклонение и не снижает процент принятых работ.</p>
+    {% for e in redo_edits %}
+      <div class="panel">
+        <p>Фрагмент #{{ e.clip_id }}: {{ e.reviewer_note }}</p>
+        {% if e.clip.batch.is_open %}<a class="button subtle" href="{% url 'clip-edit' e.clip_id %}">Исправить →</a>
+        {% else %}<p>Пачка временно закрыта. Обратитесь к редактору.</p>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   <div class="panel">
     <div class="panel-title"><h2 style="margin:0">Мои правки</h2></div>
     <div class="stats-grid" style="margin-bottom:14px">

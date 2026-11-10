@@ -9,6 +9,7 @@
   <p class="mod-info-label">Каждая отправленная правка ждёт решения редактора. Автооценка — только предварительная подсказка. Счётчики показывают количество правок участников.</p>
   <div class="category-tabs">
     <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="?status=pending&amp;kind={{ kind }}">Ждут оценки ({{ counts.pending }})</a>
+    <a class="category-tab {% if status == 'redo' %}is-active{% endif %}" href="?status=redo&amp;kind={{ kind }}">На исправлении ({{ counts.redo }})</a>
     <a class="category-tab {% if status == 'accepted' %}is-active{% endif %}" href="?status=accepted&amp;kind={{ kind }}">Приняты ({{ counts.accepted }})</a>
     <a class="category-tab {% if status == 'rejected' %}is-active{% endif %}" href="?status=rejected&amp;kind={{ kind }}">Отклонены ({{ counts.rejected }})</a>
     <a class="category-tab {% if status == 'all' %}is-active{% endif %}" href="?status=all&amp;kind={{ kind }}">Все отправленные ({{ counts.all }})</a>
@@ -38,10 +39,11 @@
       {% for e in c.review_edits %}
         <div class="edit-row">
           <div class="edit-who"><span class="mod-info-label">{{ e.user.profile.display_name|default:e.user.username }}</span>
-            <span class="status {% if e.is_reviewed %}verdict-{{ e.verdict }}{% else %}verdict-pending{% endif %}">{% if e.is_reviewed %}{{ e.get_verdict_display }}{% else %}Ждёт оценки{% endif %}</span>
+            <span class="status {% if e.is_reviewed or e.verdict == 'redo' %}verdict-{{ e.verdict }}{% else %}verdict-pending{% endif %}">{% if e.is_reviewed or e.verdict == 'redo' %}{{ e.get_verdict_display }}{% else %}Ждёт оценки{% endif %}</span>
             {% if c.is_gold %}<span class="mod-info-label">Автопроверка: {{ e.errors }} буквенных расхождений</span>{% endif %}
             {% if e.is_reviewed %}<span class="mod-info-label">Решение редактора</span>{% endif %}</div>
           <div class="edit-text">{{ e.text }}</div>
+          {% if e.reviewer_note %}<p class="helptext">Замечание редактора: {{ e.reviewer_note }}</p>{% endif %}
           {% if suggest and suggest.edit == e.pk %}
           <div class="suggest-box">Ваш текст «{{ suggest.text }}» совпадает с этим вариантом. Принять его?</div>
           {% endif %}
@@ -49,6 +51,13 @@
             {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
             <button type="submit" name="verdict" value="accepted" class="button small-button {% if e.is_reviewed and e.verdict == 'accepted' %}{% elif suggest and suggest.edit == e.pk %}{% else %}subtle{% endif %}">✓ Принять</button>
             <button type="submit" name="verdict" value="rejected" class="button small-button {% if e.verdict != 'rejected' %}subtle{% else %}danger{% endif %}">✗ Отклонить</button>
+          </form>
+          <form method="post" action="{% url 'clip-verdict' e.pk %}" class="panel">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <label for="redo-note-{{ e.pk }}">Что нужно исправить</label>
+            <textarea id="redo-note-{{ e.pk }}" name="note" rows="2" maxlength="1000" required>{{ e.reviewer_note }}</textarea>
+            <button type="submit" name="verdict" value="redo" class="button small-button subtle">↶ Исправь</button>
+            <span class="helptext">Вернуть участнику на доработку. Не считается отклонением.</span>
           </form>
         </div>
       {% endfor %}

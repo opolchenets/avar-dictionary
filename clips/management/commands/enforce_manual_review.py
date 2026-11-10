@@ -12,7 +12,7 @@ class Command(BaseCommand):
         parser.add_argument("--apply", action="store_true")
 
     def handle(self, apply, **kwargs):
-        automatic = ClipEdit.objects.filter(reviewed_by__isnull=True)
+        automatic = ClipEdit.objects.filter(reviewed_by__isnull=True).exclude(verdict="redo")
         reset = automatic.exclude(verdict="pending").count()
         points = PointLedger.objects.filter(reason="clip_accepted",
             clip__edits__reviewed_by__isnull=True,
@@ -22,7 +22,7 @@ class Command(BaseCommand):
             for pk in Clip.objects.filter(edits__isnull=False, edits__reviewed_by__isnull=True).distinct().values_list("pk", flat=True).iterator():
                 with transaction.atomic():
                     clip = Clip.objects.select_for_update().get(pk=pk)
-                    for edit in clip.edits.filter(reviewed_by__isnull=True):
+                    for edit in clip.edits.filter(reviewed_by__isnull=True).exclude(verdict="redo"):
                         actual_reset += edit.verdict != "pending"
                         ClipEdit.objects.filter(pk=edit.pk).update(verdict="pending", reviewed_at=None)
                         removed, _ = PointLedger.objects.filter(user_id=edit.user_id, clip=clip, reason="clip_accepted").delete()
