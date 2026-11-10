@@ -11,11 +11,14 @@ from .models import Clip, ClipEdit, gold_is_correct, texts_match
 POINTS_ACCEPTED = 1   # Only an explicit editorial decision can award points.
 
 
-def next_clip_for(user):
+def next_clip_for(user, skip_clip_id=None):
     """Следующий фрагмент: открытая пачка, пользователь его ещё не правил, правок меньше двух."""
+    redo = ClipEdit.objects.filter(user=user, verdict="redo", clip__batch__is_open=True).exclude(clip_id=skip_clip_id).order_by("reviewed_at", "pk").first()
+    if redo:
+        return redo.clip
     done_ids = ClipEdit.objects.filter(user=user).values_list("clip_id", flat=True)
     qs = (Clip.objects.filter(batch__is_open=True, status=Clip.Status.OPEN)
-          .exclude(id__in=done_ids).annotate(n=Count("edits")))
+          .exclude(id__in=done_ids).exclude(pk=skip_clip_id).annotate(n=Count("edits")))
     # Фрагмент выбирается случайно из всех доступных: второго правщика подбирает случай,
     # поэтому пары постоянно меняются и договориться «править вдвоём» нельзя.
     return qs.order_by("?").first()
@@ -23,7 +26,7 @@ def next_clip_for(user):
 
 @transaction.atomic
 def set_verdict(edit, verdict, by=None):
-    if by is None or verdict not in (ClipEdit.Verdict.ACCEPTED, ClipEdit.Verdict.REJECTED):
+    if by is None or verdict not in (ClipEdit.Verdict.ACCEPTED, ClipEdit.Verdict.REJECTED, ClipEdit.Verdict.REDO):
         raise ValueError("A final verdict requires a named reviewer.")
     Clip.objects.select_for_update().get(pk=edit.clip_id)
     edit.verdict = verdict
@@ -40,7 +43,8 @@ def set_verdict(edit, verdict, by=None):
 def submit_edit(clip, user, text):
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
     existing = ClipEdit.objects.filter(clip=clip, user=user).first()
-    if not clip.batch.is_open or clip.status != Clip.Status.OPEN or (existing and existing.verdict != ClipEdit.Verdict.PENDING):
+    retry = existing is not None and existing.verdict == ClipEdit.Verdict.REDO
+    if not clip.batch.is_open or (not retry and (clip.status != Clip.Status.OPEN or (existing and existing.verdict != ClipEdit.Verdict.PENDING))):
         return "closed", existing
     text = fix_palochka(text.strip())
     edit, _ = ClipEdit.objects.update_or_create(
@@ -80,11 +84,11 @@ def accept_edit(edit, by):
 
 
 @transaction.atomic
-def reject_edit(edit, by):
+def _nonaccepted_edit(edit, by, verdict):
     clip = Clip.objects.select_for_update().get(pk=edit.clip_id)
     edit.refresh_from_db()
     was_final = not clip.is_gold and clip.final_text == fix_palochka(edit.text)
-    set_verdict(edit, ClipEdit.Verdict.REJECTED, by)
+    set_verdict(edit, verdict, by)
     if was_final:
         approved = clip.edits.filter(verdict="accepted", reviewed_by__isnull=False).order_by("-reviewed_at", "-pk").first()
         clip.final_text = fix_palochka(approved.text) if approved else ""
@@ -97,6 +101,20 @@ def reject_edit(edit, by):
             clip.status = Clip.Status.AGREED if texts_match(pending[0].text, pending[1].text) else Clip.Status.DISPUTED
         clip.final_text = ""
         clip.save(update_fields=["status", "final_text", "updated_at"])
+
+
+def reject_edit(edit, by):
+    _nonaccepted_edit(edit, by, ClipEdit.Verdict.REJECTED)
+
+
+@transaction.atomic
+def request_correction(edit, by, note):
+    note = note.strip()
+    if not note or len(note) > 1000:
+        raise ValueError("Напишите, что исправить: от 1 до 1000 символов.")
+    _nonaccepted_edit(edit, by, ClipEdit.Verdict.REDO)
+    edit.reviewer_note = note
+    edit.save(update_fields=["reviewer_note"])
 
 
 def matching_edit(clip, text):
@@ -137,4 +155,5 @@ def user_stats(user):
     return {"total": q.count(),
             "accepted": q.filter(verdict="accepted", reviewed_by__isnull=False).count(),
             "rejected": q.filter(verdict="rejected", reviewed_by__isnull=False).count(),
-            "pending": q.filter(Q(verdict="pending") | Q(reviewed_by__isnull=True)).count()}
+            "redo": q.filter(verdict="redo").count(),
+            "pending": q.exclude(verdict="redo").filter(Q(verdict="pending") | Q(reviewed_by__isnull=True)).count()}

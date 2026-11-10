@@ -69,6 +69,7 @@ def gold_is_correct(text: str, gold: str) -> bool:
 class ClipEdit(models.Model):
     class Verdict(models.TextChoices):
         PENDING = "pending", "Ждёт оценки"
+        REDO = "redo", "Нужно исправить"
         ACCEPTED = "accepted", "Принята"
         REJECTED = "rejected", "Отклонена"
 
@@ -81,6 +82,7 @@ class ClipEdit(models.Model):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name="clip_reviews", verbose_name="Оценил")
     reviewed_at = models.DateTimeField("Оценено", null=True, blank=True)
+    reviewer_note = models.CharField("Что исправить", max_length=1000, blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
 
     @property

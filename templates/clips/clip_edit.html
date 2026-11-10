@@ -7,7 +7,8 @@
       <p class="eyebrow"><a href="{% url 'clip-home' %}">← Фрагменты</a></p>
       <h1>Фрагмент #{{ clip.pk }}</h1>
     </div>
-    {% if mine %}<span class="status pending">Вы уже правили — можно изменить</span>{% endif %}
+    {% if mine.verdict == 'redo' %}<span class="status verdict-redo">Нужно исправить</span>
+    {% elif mine and not locked %}<span class="status pending">Вы уже правили — можно изменить</span>{% endif %}
   </div>
 
   <div class="panel clip-player">
@@ -22,6 +23,13 @@
     <div class="panel"><p>Этот фрагмент уже закрыт.</p>
       <a class="button" href="{% url 'clip-next' %}">Следующий →</a></div>
   {% else %}
+  {% if mine.reviewer_note %}
+  <div class="panel">
+    <b>Замечание редактора</b>
+    <p>{{ mine.reviewer_note }}</p>
+    <p>Исправьте текст и отправьте заново. Работа снова поступит на проверку.</p>
+  </div>
+  {% endif %}
   <form method="post" class="panel">
     {% csrf_token %}
     <label for="clipText">Что сказал диктор (исправьте черновик)</label>
