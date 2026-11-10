@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from .models import Batch, Clip, ClipEdit
-from .services import submit_edit
+from .services import submit_edit, accept_edit
 
 class ClipWorkflowTests(TestCase):
     def setUp(self):
@@ -22,10 +22,13 @@ class ClipWorkflowTests(TestCase):
         self.assertEqual(result, "closed")
         self.assertEqual(ClipEdit.objects.count(), 2)
         self.clip.refresh_from_db()
-        self.assertEqual(self.clip.final_text, "same")
+        self.assertEqual(self.clip.final_text, "")
+        self.assertFalse(self.clip.is_done)
+        self.assertFalse(self.clip.edits.exclude(verdict="pending").exists())
     def test_final_text_uses_project_palochka(self):
         submit_edit(self.clip, self.users[0], "тIехь")
         submit_edit(self.clip, self.users[1], "тӀехь")
+        accept_edit(self.clip.edits.first(), self.users[2])
         self.clip.refresh_from_db()
         self.assertEqual(self.clip.final_text, "тӀехь")
     def test_private_media_requires_login(self):

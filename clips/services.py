@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from gamification.models import PointLedger
@@ -8,7 +8,7 @@ from common.normalizer import char_errors, similarity, fix_palochka
 
 from .models import Clip, ClipEdit, gold_is_correct, texts_match
 
-POINTS_ACCEPTED = 1   # очко начисляется только за принятую правку (редактором или алгоритмом для контрольных)
+POINTS_ACCEPTED = 1   # Only an explicit editorial decision can award points.
 
 
 def next_clip_for(user):
@@ -23,6 +23,8 @@ def next_clip_for(user):
 
 @transaction.atomic
 def set_verdict(edit, verdict, by=None):
+    if by is None or verdict not in (ClipEdit.Verdict.ACCEPTED, ClipEdit.Verdict.REJECTED):
+        raise ValueError("A final verdict requires a named reviewer.")
     Clip.objects.select_for_update().get(pk=edit.clip_id)
     edit.verdict = verdict
     edit.reviewed_by, edit.reviewed_at = by, timezone.now()
@@ -44,23 +46,18 @@ def submit_edit(clip, user, text):
     edit, _ = ClipEdit.objects.update_or_create(
         clip=clip, user=user,
         defaults={"text": text.strip(), "verdict": ClipEdit.Verdict.PENDING, "reviewed_by": None, "reviewed_at": None})
-    if clip.is_gold:   # контрольный: оценивает алгоритм
+    if clip.is_gold:   # Control comparison is advisory, never a final verdict.
         edit.gold_score = similarity(text, clip.gold_text)
         edit.errors = char_errors(text, clip.gold_text)
         edit.save(update_fields=["gold_score", "errors"])
-        set_verdict(edit, ClipEdit.Verdict.ACCEPTED if gold_is_correct(text, clip.gold_text)
-                    else ClipEdit.Verdict.REJECTED)
         return "saved", edit
-    # Перекрёстная проверка: два правщика совпали (в пределах порога) — обе правки приняты автоматически,
-    # иначе фрагмент уходит редакторам на перепроверку.
-    edits = list(clip.edits.all())
+    # Agreement/disagreement is only a hint for the reviewer.
+    edits = list(clip.edits.filter(verdict=ClipEdit.Verdict.PENDING))
     if len(edits) >= Clip.REQUIRED_EDITS and clip.status == Clip.Status.OPEN:
         a, b = edits[0], edits[1]
         if texts_match(a.text, b.text):
-            clip.status, clip.final_text = Clip.Status.AGREED, a.text
+            clip.status, clip.final_text = Clip.Status.AGREED, ""
             clip.save(update_fields=["status", "final_text", "updated_at"])
-            for e in (a, b):
-                set_verdict(e, ClipEdit.Verdict.ACCEPTED)
         else:
             clip.status = Clip.Status.DISPUTED
             clip.save(update_fields=["status", "updated_at"])
@@ -69,7 +66,7 @@ def submit_edit(clip, user, text):
 
 @transaction.atomic
 def accept_edit(edit, by):
-    """Редактор выбрал вариант правщика: он — итог; совпадающие с ним правки приняты, остальные отклонены."""
+    """Explicitly accept this contribution; other contributions stay unreviewed."""
     clip = Clip.objects.select_for_update().get(pk=edit.clip_id)
     edit.refresh_from_db()
     if clip.is_gold:
@@ -79,9 +76,27 @@ def accept_edit(edit, by):
         return
     clip.final_text, clip.status = fix_palochka(edit.text), Clip.Status.RESOLVED
     clip.save(update_fields=["final_text", "status", "updated_at"])
-    for e in clip.edits.all():
-        set_verdict(e, ClipEdit.Verdict.ACCEPTED if (e.pk == edit.pk or texts_match(e.text, edit.text))
-                    else ClipEdit.Verdict.REJECTED, by)
+    set_verdict(edit, ClipEdit.Verdict.ACCEPTED, by)
+
+
+@transaction.atomic
+def reject_edit(edit, by):
+    clip = Clip.objects.select_for_update().get(pk=edit.clip_id)
+    edit.refresh_from_db()
+    was_final = not clip.is_gold and clip.final_text == fix_palochka(edit.text)
+    set_verdict(edit, ClipEdit.Verdict.REJECTED, by)
+    if was_final:
+        approved = clip.edits.filter(verdict="accepted", reviewed_by__isnull=False).order_by("-reviewed_at", "-pk").first()
+        clip.final_text = fix_palochka(approved.text) if approved else ""
+        clip.status = Clip.Status.RESOLVED if approved else Clip.Status.OPEN
+        clip.save(update_fields=["status", "final_text", "updated_at"])
+    if not clip.is_gold and clip.status != Clip.Status.RESOLVED:
+        pending = list(clip.edits.filter(verdict="pending"))
+        clip.status = Clip.Status.OPEN
+        if len(pending) >= Clip.REQUIRED_EDITS:
+            clip.status = Clip.Status.AGREED if texts_match(pending[0].text, pending[1].text) else Clip.Status.DISPUTED
+        clip.final_text = ""
+        clip.save(update_fields=["status", "final_text", "updated_at"])
 
 
 def matching_edit(clip, text):
@@ -90,7 +105,9 @@ def matching_edit(clip, text):
 
 @transaction.atomic
 def resolve(clip, text, by=None):
-    """Редактор вписал свой текст: итог — его текст, все правки отклонены (совпадающие сюда не доходят)."""
+    """Reviewer explicitly saves a final text and judges the submitted variants."""
+    if by is None:
+        raise ValueError("Saving a final text requires a named reviewer.")
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
     if clip.is_gold:
         clip.gold_text = fix_palochka(text.strip())
@@ -105,7 +122,7 @@ def resolve(clip, text, by=None):
 
 @transaction.atomic
 def reassess_gold_clip(clip):
-    """Refresh control scores, preserving explicitly reviewed human verdicts."""
+    """Refresh advisory scores only; final decisions are never made here."""
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
     if not clip.is_gold:
         raise ValueError("Only control clips can be reassessed.")
@@ -113,14 +130,11 @@ def reassess_gold_clip(clip):
         edit.errors = char_errors(edit.text, clip.gold_text)
         edit.gold_score = similarity(edit.text, clip.gold_text)
         edit.save(update_fields=["errors", "gold_score"])
-        if edit.reviewed_by_id is None:
-            verdict = ClipEdit.Verdict.ACCEPTED if gold_is_correct(edit.text, clip.gold_text) else ClipEdit.Verdict.REJECTED
-            set_verdict(edit, verdict)
 
 
 def user_stats(user):
     q = ClipEdit.objects.filter(user=user)
     return {"total": q.count(),
-            "accepted": q.filter(verdict="accepted").count(),
-            "rejected": q.filter(verdict="rejected").count(),
-            "pending": q.filter(verdict="pending").count()}
+            "accepted": q.filter(verdict="accepted", reviewed_by__isnull=False).count(),
+            "rejected": q.filter(verdict="rejected", reviewed_by__isnull=False).count(),
+            "pending": q.filter(Q(verdict="pending") | Q(reviewed_by__isnull=True)).count()}

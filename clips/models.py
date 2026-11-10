@@ -22,7 +22,7 @@ class Batch(models.Model):
 class Clip(models.Model):
     class Status(models.TextChoices):
         OPEN = "open", "Ждёт правок"
-        AGREED = "agreed", "Готово (совпало)"
+        AGREED = "agreed", "Совпали — ждёт редактора"
         DISPUTED = "disputed", "Спор — у редактора"
         RESOLVED = "resolved", "Готово (редактор)"
 
@@ -50,7 +50,7 @@ class Clip(models.Model):
 
     @property
     def is_done(self):
-        return self.status in (self.Status.AGREED, self.Status.RESOLVED)
+        return self.status == self.Status.RESOLVED
 
 
 def texts_match(a: str, b: str) -> bool:
@@ -82,6 +82,10 @@ class ClipEdit(models.Model):
                                     related_name="clip_reviews", verbose_name="Оценил")
     reviewed_at = models.DateTimeField("Оценено", null=True, blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
+
+    @property
+    def is_reviewed(self):
+        return self.reviewed_by_id is not None and self.verdict in (self.Verdict.ACCEPTED, self.Verdict.REJECTED)
 
     class Meta:
         verbose_name = "Правка фрагмента"

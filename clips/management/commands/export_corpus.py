@@ -18,7 +18,7 @@ class Command(BaseCommand):
         with (directory / "transcriptions.csv").open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["id", "audio", "text", "seconds", "source", "kind"])
-            for clip in Clip.objects.filter(is_gold=False, status__in=["agreed", "resolved"]).select_related("batch").iterator():
+            for clip in Clip.objects.filter(is_gold=False, status="resolved").exclude(final_text="").select_related("batch").iterator():
                 writer.writerow([clip.pk, clip.audio.name, fix_palochka(clip.final_text), clip.duration, clip.batch.source, "transcription"])
             for clip in Clip.objects.filter(is_gold=True).exclude(gold_text="").select_related("batch").iterator():
                 writer.writerow([clip.pk, clip.audio.name, fix_palochka(clip.gold_text), clip.duration, clip.batch.source, "reference"])

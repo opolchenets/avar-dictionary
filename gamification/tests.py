@@ -12,7 +12,8 @@ class LeaderboardTests(TestCase):
         user.profile.district = district
         user.profile.save()
         clip = Clip.objects.create(batch=Batch.objects.create(name="Batch"), audio="dummy.wav")
-        ClipEdit.objects.create(clip=clip, user=user, text="text", verdict="accepted")
+        reviewer = get_user_model().objects.create_user(username="reviewer")
+        ClipEdit.objects.create(clip=clip, user=user, text="text", verdict="accepted", reviewed_by=reviewer)
         response = self.client.get(reverse("leaderboard"))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["user_rows"][0]["edits"], 1)

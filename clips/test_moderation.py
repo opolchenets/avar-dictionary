@@ -34,11 +34,12 @@ class ModerationTests(TestCase):
         self.assertEqual(char_errors("кот", "кит"), 1)
         self.assertNotEqual(normalize("#"), normalize("..."))
 
-    def test_automatic_control_accepts_formatting_only(self):
+    def test_automatic_control_only_suggests_even_when_formatting_matches(self):
         text = "ДАГЬ дагьккун гьей ботӀрол"
         _, edit = submit_edit(self.clip, self.worker, text)
         edit.refresh_from_db()
-        self.assertEqual(edit.verdict, "accepted")
+        self.assertEqual(edit.verdict, "pending")
+        self.assertFalse(PointLedger.objects.filter(clip=self.clip).exists())
         self.assertEqual(edit.errors, 0)
         self.assertEqual(edit.text, text)
         self.clip.refresh_from_db()
@@ -50,6 +51,7 @@ class ModerationTests(TestCase):
 
     def test_coeditor_can_accept_rejected_control_and_reverse_decision(self):
         edit = self.rejected_edit()
+        set_verdict(edit, "rejected", self.reviewer)
         url = reverse("clip-verdict", args=[edit.pk])
         for verdict, points in [("accepted", 1), ("accepted", 1), ("rejected", 0), ("accepted", 1)]:
             response = self.client.post(url, {"verdict": verdict, "next": "/clips/review/?status=gold"})
@@ -68,7 +70,7 @@ class ModerationTests(TestCase):
         self.client.post(reverse("clip-verdict", args=[edit.pk]), {"verdict": "accepted"})
         other_edit.refresh_from_db()
         self.clip.refresh_from_db()
-        self.assertEqual(other_edit.verdict, "rejected")
+        self.assertEqual(other_edit.verdict, "pending")
         self.assertIsNone(other_edit.reviewed_by_id)
         self.assertEqual(self.clip.gold_text, "Дагь-дагьккун гьей ботӀрол,")
 
@@ -82,7 +84,7 @@ class ModerationTests(TestCase):
         edit.refresh_from_db()
         self.assertEqual(self.clip.gold_text, edit.text)
         self.assertEqual(edit.errors, 0)
-        self.assertEqual(edit.verdict, "accepted")
+        self.assertEqual(edit.verdict, "pending")
         self.assertEqual(self.clip.status, "open")
 
     def test_reference_revision_preserves_human_verdict(self):
@@ -101,7 +103,7 @@ class ModerationTests(TestCase):
         self.assertEqual(self.client.post(reverse("clip-resolve", args=[self.clip.pk]), {"text": "new"}).status_code, 403)
         self.assertEqual(self.client.get(reverse("clip-review") + "?status=gold").status_code, 403)
         edit.refresh_from_db()
-        self.assertEqual(edit.verdict, "rejected")
+        self.assertEqual(edit.verdict, "pending")
 
     def test_control_page_contains_working_actions_and_reference_editor(self):
         edit = self.rejected_edit()
@@ -135,7 +137,7 @@ class ModerationTests(TestCase):
         call_command("reassess_gold", apply=True, stdout=io.StringIO())
         edit.refresh_from_db()
         manual.refresh_from_db()
-        self.assertEqual((edit.errors, edit.verdict), (0, "accepted"))
+        self.assertEqual((edit.errors, edit.verdict), (0, "rejected"))
         self.assertEqual((manual.errors, manual.verdict), (0, "rejected"))
         call_command("reassess_gold", apply=True, stdout=io.StringIO())
-        self.assertEqual(PointLedger.objects.filter(user=self.worker, clip=self.clip).count(), 1)
+        self.assertEqual(PointLedger.objects.filter(user=self.worker, clip=self.clip).count(), 0)
