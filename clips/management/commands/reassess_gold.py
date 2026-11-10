@@ -1,11 +1,11 @@
 from django.core.management.base import BaseCommand
-from clips.models import Clip, ClipEdit, gold_is_correct
+from clips.models import Clip
 from clips.services import reassess_gold_clip
 from common.normalizer import char_errors
 
 
 class Command(BaseCommand):
-    help = "Preview/recompute automatic control verdicts; preserve human verdicts."
+    help = "Preview/recompute advisory control scores only; never change verdicts."
 
     def add_arguments(self, parser):
         parser.add_argument("--apply", action="store_true")
@@ -19,9 +19,6 @@ class Command(BaseCommand):
                 metric_changes += edit.errors != char_errors(edit.text, clip.gold_text)
                 if edit.reviewed_by_id is not None:
                     manual += 1
-                else:
-                    target = ClipEdit.Verdict.ACCEPTED if gold_is_correct(edit.text, clip.gold_text) else ClipEdit.Verdict.REJECTED
-                    verdict_changes += edit.verdict != target
             if apply:
                 reassess_gold_clip(clip)
         self.stdout.write(f"{'APPLIED' if apply else 'PREVIEW (no changes)'}: edits={edits}, verdict_changes={verdict_changes}, error_count_changes={metric_changes}, manual_verdicts_preserved={manual}")

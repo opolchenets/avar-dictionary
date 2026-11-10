@@ -12,7 +12,8 @@ class CorpusExportTests(TestCase):
     def test_export_only_final_or_reference_material_and_accepted_recordings(self):
         batch = Batch.objects.create(name="Batch")
         Clip.objects.create(batch=batch, audio="clips/open.wav", draft_text="unverified")
-        Clip.objects.create(batch=batch, audio="clips/final.wav", status="agreed", final_text="тIехь")
+        Clip.objects.create(batch=batch, audio="clips/final.wav", status="resolved", final_text="тIехь")
+        Clip.objects.create(batch=batch, audio="clips/automatic.wav", status="agreed", final_text="unreviewed")
         Clip.objects.create(batch=batch, audio="clips/gold.wav", is_gold=True, gold_text="тӀехь")
         user = get_user_model().objects.create_user(username="private-name")
         prompt = Prompt.objects.create(text="phrase")
