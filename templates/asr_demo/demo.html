@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Попробовать модель — Avar Corpus{% endblock %}
+{% block content %}
+<div class="asr-demo-shell">
+  <section class="panel asr-demo-card">
+    <h1>Попробовать модель</h1>
+    <p class="lead">Запишите до 5 секунд аварской речи. Дообученная модель распознавания и четырёхграммная языковая модель преобразуют запись в текст.</p>
+    <p class="muted">Это демонстрация текущего прогресса: результат может содержать ошибки. Записи доступны только системе и автоматически удаляются через 2 дня.</p>
+    <div class="asr-quota"><strong>Доступно 15 попыток в день</strong><span>Осталось: {{ remaining }} из {{ limit }}</span></div>
+
+    {% if error %}<div class="message error">{{ error }}</div>{% endif %}
+    {% if result %}
+      <div class="asr-result">
+        <span>Модель распознала:</span>
+        <p>{{ result.result_text }}</p>
+        {% if result.model_version %}<small>Версия: {{ result.model_version }}</small>{% endif %}
+      </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="asrForm">
+      {% csrf_token %}
+      <input type="file" name="audio" id="audioInput" accept="audio/*" hidden required>
+      <div class="asr-recorder">
+        <div class="asr-timer" id="timer">0,0 / 5,0 с</div>
+        <button type="button" class="button" id="recordButton" {% if not remaining or not service_configured %}disabled{% endif %}>● Начать запись</button>
+        <button type="button" class="button subtle" id="resetButton" hidden>Записать заново</button>
+        <audio id="preview" controls hidden></audio>
+        <button type="submit" class="button" id="submitButton" disabled>Распознать</button>
+      </div>
+    </form>
+    {% if not service_configured %}<p class="message warning">Модель подготовлена, но соединение с сайтом ещё не включено.</p>{% endif %}
+    <p class="asr-privacy">Лимит защищает сервер от перегрузки. Пятнадцать попыток восстанавливаются постепенно в течение следующих 24 часов.</p>
+  </section>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+  const record = document.getElementById('recordButton');
+  if (!record) return;
+  const reset = document.getElementById('resetButton');
+  const submit = document.getElementById('submitButton');
+  const input = document.getElementById('audioInput');
+  const preview = document.getElementById('preview');
+  const timer = document.getElementById('timer');
+  let recorder, stream, chunks = [], started, ticker;
+
+  function stopTracks() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
+  function resetRecording() {
+    clearInterval(ticker); stopTracks(); chunks = []; input.value = '';
+    preview.hidden = true; preview.removeAttribute('src'); submit.disabled = true;
+    reset.hidden = true; record.hidden = false; timer.textContent = '0,0 / 5,0 с';
+  }
+  reset.addEventListener('click', resetRecording);
+  record.addEventListener('click', async () => {
+    if (recorder && recorder.state === 'recording') {
+      recorder.stop();
+      return;
+    }
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      alert('Этот браузер не поддерживает запись. Обновите браузер.'); return;
+    }
+    try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); }
+    catch (_) { alert('Разрешите сайту доступ к микрофону.'); return; }
+    chunks = []; recorder = new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      clearInterval(ticker); stopTracks();
+      const blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
+      const file = new File([blob], 'trial.webm', {type: blob.type});
+      const transfer = new DataTransfer(); transfer.items.add(file); input.files = transfer.files;
+      preview.src = URL.createObjectURL(blob); preview.hidden = false;
+      submit.disabled = false; reset.hidden = false; record.hidden = true;
+    };
+    recorder.start(200); started = Date.now(); record.textContent = '■ Остановить';
+    ticker = setInterval(() => {
+      const seconds = Math.min(5, (Date.now() - started) / 1000);
+      timer.textContent = seconds.toFixed(1).replace('.', ',') + ' / 5,0 с';
+      if (seconds >= 5 && recorder.state === 'recording') recorder.stop();
+    }, 100);
+  });
+  document.getElementById('asrForm').addEventListener('submit', () => {
+    submit.disabled = true; submit.textContent = 'Обработка…';
+  });
+})();
+</script>
+{% endblock %}

@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "editor",
     "clips",
     "reading",
+    "asr_demo",
 ]
 
 MIDDLEWARE = ["django.middleware.security.SecurityMiddleware"]
@@ -202,3 +203,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUDIO_REQUIRE_DECODER = env_bool("AUDIO_REQUIRE_DECODER", "False" if DEBUG else "True")
 DATA_UPLOAD_MAX_MEMORY_SIZE = 11 * 1024 * 1024
+
+ASR_SERVICE_URL = os.getenv("ASR_SERVICE_URL", "").rstrip("/")
+ASR_INTERNAL_TOKEN = os.getenv("ASR_INTERNAL_TOKEN", "")
+ASR_TRIAL_ROOT = Path(os.getenv("ASR_TRIAL_ROOT", str(BASE_DIR / "private_asr_trials")))
+ASR_TRIAL_DAILY_LIMIT = 15
+ASR_TRIAL_RETENTION_HOURS = 48

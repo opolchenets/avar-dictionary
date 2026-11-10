@@ -25,6 +25,7 @@ services:
     volumes:
       - ./media:/app/media
       - ./transfer:/app/transfer
+      - ./private_asr_trials:/app/private_asr_trials
     expose: ["8000"]
   caddy:
     profiles: [public]

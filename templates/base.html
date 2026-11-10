@@ -16,6 +16,7 @@
         <a href="{% url 'rules' %}">Правила</a>
         <a href="{% url 'clip-home' %}">Аудиофрагменты</a>
         <a href="{% url 'reading-home' %}">Прочтение</a>
+        <a href="{% url 'asr-demo' %}">Попробовать модель</a>
         <a href="{% url 'leaderboard' %}">Лидерборд</a>
         {% if request.user.is_authenticated %}
           <div class="notification-wrapper">
@@ -82,6 +83,7 @@
           <a href="{% url 'rules' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Правила</a>
           <a href="{% url 'clip-home' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Аудиофрагменты</a>
           <a href="{% url 'reading-home' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Прочтение</a>
+          <a href="{% url 'asr-demo' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Попробовать модель</a>
           <a href="{% url 'leaderboard' %}" style="text-decoration: none; color: var(--muted); font-weight: 600; font-size: 0.9rem;">Лидерборд</a>
         </nav>
       </div>

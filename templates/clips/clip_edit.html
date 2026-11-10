@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Фрагмент #{{ clip.pk }} — Avar Corpus{% endblock %}
+{% block body_class %}workspace-page compact-clip-page{% endblock %}
 {% block content %}
+<style>
+.compact-clip-page .site-header{position:static}.compact-clip-page .site-footer{display:none}
+.compact-clip-page .page-shell{padding-top:12px}.compact-clip-page .stack{gap:12px}
+.compact-clip-page .panel{padding:16px}.compact-clip-page h1{font-size:1.6rem;margin:0}
+.compact-clip-page .clip-text{box-sizing:border-box;width:100%;min-height:140px;height:clamp(140px,24dvh,260px);font-size:18px;line-height:1.4;resize:vertical}
+.clip-actions{display:flex;gap:8px;align-items:center;margin-top:12px}.clip-actions>.button{padding:10px 12px;font-size:14px;white-space:nowrap}
+.audio-problem{position:relative;margin-left:auto}.problem-popup{position:absolute;right:0;bottom:100%;width:230px;padding:12px;background:var(--panel,#25213e);border:1px solid #9882ff;border-radius:12px;z-index:5;box-shadow:0 4px 20px #0008}
+.problem-popup:not([hidden]){display:grid;gap:10px}.compact-help{font-size:12px;line-height:1.4;margin:12px 0 0}
+@media(max-width:600px){.compact-clip-page .site-header .header-row{gap:6px;padding:8px 12px}.compact-clip-page .brand{font-size:20px}.compact-clip-page .site-nav{gap:10px;font-size:12px}.compact-clip-page .clip-player .action-row{display:none}.compact-clip-page .panel{padding:12px}.compact-clip-page .section-head{margin:0}.clip-actions>.button{font-size:12px;padding:10px 8px}.compact-clip-page .page-shell>.container{padding:0 10px}}
+</style>
 <div class="page-narrow stack">
   <div class="section-head">
     <div>
@@ -33,21 +44,28 @@
   <form method="post" class="panel">
     {% csrf_token %}
     <label for="clipText">Что сказал диктор (исправьте черновик)</label>
-    <div class="pal-bar">
-      <button type="button" class="small-button button subtle" onclick="ins('Ӏ')" title="Палочка">Ӏ</button>
-      <span class="mod-info-label">Палочка: кнопка или клавиша <kbd>Alt+1</kbd></span>
-    </div>
-    <textarea id="clipText" name="text" class="clip-text" rows="3" autofocus>{{ text }}</textarea>
-    <p class="helptext">Сохраняйте смысл услышанного и используйте литературную норму аварского языка. Числа — словами.</p>
-    {% include "clips/transcription_help.html" %}
-    <div class="action-row action-row--between">
+    <textarea id="clipText" name="text" class="clip-text" rows="4">{{ text }}</textarea>
+    <div class="clip-actions">
       <button type="submit" name="action" value="skip" class="button subtle">Пропустить</button>
-      <button type="submit" name="action" value="save" class="button">Сохранить и дальше <kbd>Ctrl+Enter</kbd></button>
+      <button type="submit" name="action" value="save" class="button">Сохранить и дальше</button>
+      <span class="audio-problem"><button type="button" class="button subtle" id="problemToggle" aria-label="Проблема аудиофрагмента" aria-expanded="false" aria-controls="problemPopup">⚑</button>
+      <span class="problem-popup" id="problemPopup" hidden>Проблема аудиофрагмента
+        <button type="submit" name="action" value="report" class="button subtle">Сообщить и дальше</button>
+        <small>Текст правки при этом не отправляется.</small>
+      </span></span>
     </div>
+    <p class="helptext compact-help">Пишите по литературной норме, сохраняя смысл. При запинке оставляйте целое слово. Числа — словами. <a href="{% url 'rules' %}">Все правила</a></p>
   </form>
   {% endif %}
 </div>
 <script>
+const toggle=document.getElementById('problemToggle'), popup=document.getElementById('problemPopup');
+if(toggle){const setOpen=v=>{popup.hidden=!v;toggle.setAttribute('aria-expanded',String(v));};
+toggle.addEventListener('click',()=>setOpen(popup.hidden));
+toggle.parentElement.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)setOpen(true);});
+toggle.parentElement.addEventListener('mouseleave',()=>{if(matchMedia('(hover:hover)').matches)setOpen(false);});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
+document.addEventListener('click',e=>{if(!toggle.parentElement.contains(e.target))setOpen(false);});}
 const a=document.getElementById('clipAudio'), t=document.getElementById('clipText');
 function play(r){a.playbackRate=r;a.currentTime=0;a.play();}
 function ins(s){if(!t)return;const i=t.selectionStart;t.value=t.value.slice(0,i)+s+t.value.slice(t.selectionEnd);t.selectionStart=t.selectionEnd=i+s.length;t.focus();}

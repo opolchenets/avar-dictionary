@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView
 
-from .models import Batch, Clip, ClipEdit
+from .models import AudioIssue, Batch, Clip, ClipEdit
 from .services import accept_edit, matching_edit, next_clip_for, resolve, reject_edit, request_correction, submit_edit, user_stats
 
 
@@ -63,6 +63,12 @@ class ClipEditView(LoginRequiredMixin, View):
 
     def post(self, request, pk):
         clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
+        if request.POST.get("action") == "report":
+            AudioIssue.objects.get_or_create(clip=clip, user=request.user,
+                defaults={"reason": "other", "note": ""})
+            request.session["skip_clip_once"] = clip.pk
+            messages.success(request, "Проблема передана редактору. Текст правки не отправлен, рейтинг не изменён.")
+            return redirect("clip-next")
         text = request.POST.get("text", "").strip()
         if request.POST.get("action") == "skip":
             request.session["skip_clip_once"] = clip.pk
