@@ -39,7 +39,7 @@ docker compose -f docker-compose.production.yml run --rm web python manage.py in
 docker compose -f docker-compose.production.yml run --rm web python manage.py changepassword admin
 docker compose -f docker-compose.production.yml run --rm web python manage.py site_preflight --production
 docker compose -f docker-compose.production.yml run --rm web python manage.py check --deploy --fail-level WARNING
-docker compose -f docker-compose.production.yml run --rm web python manage.py test --noinput
+docker compose -f docker-compose.production.yml run --rm web python manage.py test --settings=core.test_settings --noinput
 ```
 
 Импорт откажется перезаписывать существующую базу/медиа. Повторный запуск после успешного импорта не требуется. Ожидаемые исходные количества указаны в manifest.json. В имеющемся пакете: 883 клипа, 80 текстов, 2 записи, 5 пользователей. Перед публичным тестом проверить список пользователей в админке: аккаунты для тестов отключить, реальные роли сохранить. Ничего не удалять массовой командой без отдельного решения.

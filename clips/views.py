@@ -114,11 +114,15 @@ class ResolveView(UserPassesTestMixin, View):
         return is_editor(self.request.user)
 
     def post(self, request, pk):
-        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
+        clip = get_object_or_404(Clip, pk=pk)
         text = request.POST.get("text", "").strip()
         back = get_safe_redirect(request, reverse("clip-review"))
         if not text:
             return redirect(back)
+        if clip.is_gold:
+            resolve(clip, text, request.user)
+            messages.success(request, f"Фрагмент #{clip.pk}: эталон сохранён, автоматические оценки пересчитаны. Ручные решения сохранены.")
+            return redirect(f"{back}#clip-{clip.pk}")
         m = matching_edit(clip, text)
         if m and not request.POST.get("force"):
             request.session["clip_suggest"] = {"clip": clip.pk, "edit": m.pk, "text": text}
@@ -136,7 +140,7 @@ class VerdictView(UserPassesTestMixin, View):
         return is_editor(self.request.user)
 
     def post(self, request, pk):
-        edit = get_object_or_404(ClipEdit, pk=pk, clip__is_gold=False)
+        edit = get_object_or_404(ClipEdit, pk=pk)
         v = request.POST.get("verdict")
         if v == ClipEdit.Verdict.ACCEPTED:
             accept_edit(edit, request.user)

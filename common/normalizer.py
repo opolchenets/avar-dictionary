@@ -3,12 +3,14 @@
 
 fix_palochka  — привести все варианты палочки к Ӏ (U+04C0), только после кириллической буквы,
                 чтобы не трогать цифры и латиницу («1990» и «Ilya» останутся как есть).
-normalize     — вид для сравнения: палочка, без регистра, «ё»→«е», без пунктуации и лишних пробелов.
+normalize     — вид для оценки: палочка, без регистра, «ё»→«е», только буквы и цифры.
+                Пробелы, дефисы и пунктуация не влияют на оценку. Исходный текст не изменяется.
 char_errors   — число посимвольных ошибок (расстояние Левенштейна) между нормализованными строками.
 similarity    — доля совпадения 0…1 (difflib), для информации.
 """
 import difflib
 import re
+import unicodedata
 
 from .constants import PAL, PAL_LOOKALIKES
 
@@ -20,9 +22,11 @@ def fix_palochka(text: str) -> str:
 
 
 def normalize(text: str) -> str:
-    t = fix_palochka(text).lower().replace("ё", "е").replace(PAL.lower(), PAL)
-    t = re.sub(r"[^\w\s" + PAL + r"-]", " ", t)
-    return re.sub(r"\s+", " ", t).strip()
+    if (text or "").strip() == "#":
+        return "#"  # Explicit no-speech marker must not match arbitrary punctuation.
+    t = unicodedata.normalize("NFC", fix_palochka(text)).casefold()
+    t = t.replace("ё", "е").replace(PAL.lower(), PAL)
+    return "".join(char for char in t if char.isalnum())
 
 
 def char_errors(a: str, b: str) -> int:

@@ -71,6 +71,12 @@ def submit_edit(clip, user, text):
 def accept_edit(edit, by):
     """Редактор выбрал вариант правщика: он — итог; совпадающие с ним правки приняты, остальные отклонены."""
     clip = Clip.objects.select_for_update().get(pk=edit.clip_id)
+    edit.refresh_from_db()
+    if clip.is_gold:
+        # A manual exception applies to this contribution, never to other users
+        # or to the reference used for future control submissions.
+        set_verdict(edit, ClipEdit.Verdict.ACCEPTED, by)
+        return
     clip.final_text, clip.status = fix_palochka(edit.text), Clip.Status.RESOLVED
     clip.save(update_fields=["final_text", "status", "updated_at"])
     for e in clip.edits.all():
@@ -86,10 +92,30 @@ def matching_edit(clip, text):
 def resolve(clip, text, by=None):
     """Редактор вписал свой текст: итог — его текст, все правки отклонены (совпадающие сюда не доходят)."""
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
+    if clip.is_gold:
+        clip.gold_text = fix_palochka(text.strip())
+        clip.save(update_fields=["gold_text", "updated_at"])
+        reassess_gold_clip(clip)
+        return
     clip.final_text, clip.status = fix_palochka(text.strip()), Clip.Status.RESOLVED
     clip.save(update_fields=["status", "final_text", "updated_at"])
     for e in clip.edits.all():
         set_verdict(e, ClipEdit.Verdict.ACCEPTED if texts_match(e.text, text) else ClipEdit.Verdict.REJECTED, by)
+
+
+@transaction.atomic
+def reassess_gold_clip(clip):
+    """Refresh control scores, preserving explicitly reviewed human verdicts."""
+    clip = Clip.objects.select_for_update().get(pk=clip.pk)
+    if not clip.is_gold:
+        raise ValueError("Only control clips can be reassessed.")
+    for edit in clip.edits.all():
+        edit.errors = char_errors(edit.text, clip.gold_text)
+        edit.gold_score = similarity(edit.text, clip.gold_text)
+        edit.save(update_fields=["errors", "gold_score"])
+        if edit.reviewed_by_id is None:
+            verdict = ClipEdit.Verdict.ACCEPTED if gold_is_correct(edit.text, clip.gold_text) else ClipEdit.Verdict.REJECTED
+            set_verdict(edit, verdict)
 
 
 def user_stats(user):
