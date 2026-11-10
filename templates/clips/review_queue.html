@@ -1,6 +1,9 @@
 {% extends "base.html" %}
+{% load review_diff %}
 {% block title %}Проверка фрагментов — Avar Corpus{% endblock %}
 {% block content %}
+<style>.review-difference{background:#f9a8d4;color:#4a1030;border-radius:3px;padding:0 1px}</style>
+<p class="helptext">Розовым отмечены буквенные расхождения с эталоном, итогом редактора или другим вариантом. Это подсказка, не оценка. Пунктуация, пробелы и регистр не подсвечиваются.</p>
 <div class="stack">
   <div class="section-head">
     <div><p class="eyebrow">Редактор</p><h1>Проверка фрагментов</h1></div>
@@ -42,7 +45,7 @@
             <span class="status {% if e.is_reviewed or e.verdict == 'redo' %}verdict-{{ e.verdict }}{% else %}verdict-pending{% endif %}">{% if e.is_reviewed or e.verdict == 'redo' %}{{ e.get_verdict_display }}{% else %}Ждёт оценки{% endif %}</span>
             {% if c.is_gold %}<span class="mod-info-label">Автопроверка: {{ e.errors }} буквенных расхождений</span>{% endif %}
             {% if e.is_reviewed %}<span class="mod-info-label">Решение редактора</span>{% endif %}</div>
-          <div class="edit-text">{{ e.text }}</div>
+          <div class="edit-text">{% if c.is_gold %}{% review_diff e.text c.gold_text %}{% elif c.final_text %}{% review_diff e.text c.final_text %}{% elif c.review_edits|length > 1 %}{% for other in c.review_edits %}{% if other.pk != e.pk %}<p>Сравнение с {{ other.user.username }}: {% review_diff e.text other.text %}</p>{% endif %}{% endfor %}{% else %}{{ e.text }}{% endif %}</div>
           {% if e.reviewer_note %}<p class="helptext">Замечание редактора: {{ e.reviewer_note }}</p>{% endif %}
           {% if suggest and suggest.edit == e.pk %}
           <div class="suggest-box">Ваш текст «{{ suggest.text }}» совпадает с этим вариантом. Принять его?</div>

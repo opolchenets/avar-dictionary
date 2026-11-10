@@ -35,3 +35,11 @@ class ClipAdmin(admin.ModelAdmin):
 class ClipEditAdmin(admin.ModelAdmin):
     list_display = ("id", "clip", "user", "verdict", "errors", "created_at")
     list_filter = ("verdict", "clip__is_gold", "clip__batch")
+
+
+from .models import AudioIssue
+@admin.register(AudioIssue)
+class AudioIssueAdmin(admin.ModelAdmin):
+    list_display = ("clip", "user", "created_at", "reviewed_at")
+    list_filter = ("reviewed_at",)
+    readonly_fields = ("clip", "user", "reason", "note", "created_at")

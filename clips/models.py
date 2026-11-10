@@ -94,3 +94,28 @@ class ClipEdit(models.Model):
         verbose_name_plural = "Правки фрагментов"
         unique_together = ("clip", "user")
         ordering = ("created_at",)
+
+
+class AudioIssue(models.Model):
+    class Reason(models.TextChoices):
+        HESITATION = "hesitation", "Оговорка или повтор"
+        CUT = "cut", "Обрезано слово или фраза"
+        NOISE = "noise", "Шум / речь не разобрать"
+        PLAYBACK = "playback", "Аудио не воспроизводится"
+        OTHER = "other", "Другая проблема"
+
+    clip = models.ForeignKey(Clip, on_delete=models.CASCADE, related_name="audio_issues")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                             related_name="audio_issues")
+    reason = models.CharField("Причина", max_length=20, choices=Reason.choices)
+    note = models.CharField("Комментарий участника", max_length=1000, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                    null=True, blank=True, related_name="reviewed_audio_issues")
+    reviewed_at = models.DateTimeField("Рассмотрено", null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at", "-pk")
+        verbose_name = "Проблема в аудиофрагменте"
+        verbose_name_plural = "Проблемы в аудиофрагментах"
+        constraints = [models.UniqueConstraint(fields=("clip", "user"), name="one_audio_issue_per_user_clip")]
