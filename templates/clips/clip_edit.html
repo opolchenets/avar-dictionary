@@ -30,7 +30,8 @@
       <span class="mod-info-label">Палочка: кнопка или клавиша <kbd>Alt+1</kbd></span>
     </div>
     <textarea id="clipText" name="text" class="clip-text" rows="3" autofocus>{{ text }}</textarea>
-    <p class="helptext">Пишите как произнесено, а не как «правильно». Числа — словами. Если речи нет или ничего не разобрать — напишите <b>#</b>.</p>
+    <p class="helptext">Сохраняйте смысл услышанного и используйте литературную норму аварского языка. Числа — словами.</p>
+    {% include "clips/transcription_help.html" %}
     <div class="action-row action-row--between">
       <button type="submit" name="action" value="skip" class="button subtle">Пропустить</button>
       <button type="submit" name="action" value="save" class="button">Сохранить и дальше <kbd>Ctrl+Enter</kbd></button>
