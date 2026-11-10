@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.db import connection
 from django.urls import reverse
 from .models import Prompt, Recording
 from .audio_validation import validate_audio
@@ -79,7 +80,12 @@ class RecordingWorkflowTests(TestCase):
         rec = Recording.objects.get()
         response = self.client.get(rec.audio.url)
         self.assertEqual(response.status_code, 200)
-        response.close()
+        # Exhaust the test client's iterator: its wrapper closes the file while
+        # shielding the enclosing TestCase transaction from request cleanup.
+        with patch.object(connection, "close_if_unusable_or_obsolete", wraps=connection.close_if_unusable_or_obsolete) as cleanup:
+            content = b"".join(response.streaming_content)
+        cleanup.assert_not_called()
+        self.assertTrue(content)
         self.client.force_login(self.other)
         self.assertEqual(self.client.get(rec.audio.url).status_code, 404)
 

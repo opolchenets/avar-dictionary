@@ -28,13 +28,14 @@
     <audio src="{{ c.audio.url }}" controls preload="none" style="width:100%"></audio>
     <div class="info-rows" style="margin-top:10px">
       <div class="info-row"><span class="mod-info-label">Черновик ASR</span><span>{{ c.draft_text }}</span></div>
-      {% if c.is_gold %}<div class="info-row"><span class="mod-info-label">Эталон</span><span>{{ c.gold_text }}</span></div>{% endif %}
+      {% if c.is_gold %}<div class="info-row"><span class="mod-info-label">Эталон</span><span>{{ c.gold_text }}</span></div>
+      <p class="mod-info-label">Автооценка не учитывает пунктуацию, дефисы, регистр и пробелы. Редактор может пересмотреть любое решение.</p>{% endif %}
       {% for e in c.edits.all %}
         <div class="edit-row">
           <div class="edit-who"><span class="mod-info-label">{{ e.user.profile.display_name|default:e.user.username }}</span>
-            <span class="status verdict-{{ e.verdict }}">{{ e.get_verdict_display }}{% if c.is_gold %} · ошибок: {{ e.errors }}{% endif %}</span></div>
+            <span class="status verdict-{{ e.verdict }}">{{ e.get_verdict_display }}{% if c.is_gold %} · ошибок: {{ e.errors }}{% endif %}</span>
+            {% if e.reviewed_by_id %}<span class="mod-info-label">Решение редактора</span>{% endif %}</div>
           <div class="edit-text">{{ e.text }}</div>
-          {% if not c.is_gold %}
           {% if suggest and suggest.edit == e.pk %}
           <div class="suggest-box">Ваш текст «{{ suggest.text }}» совпадает с этим вариантом. Принять его?</div>
           {% endif %}
@@ -43,20 +44,18 @@
             <button type="submit" name="verdict" value="accepted" class="button small-button {% if e.verdict == 'accepted' %}{% elif suggest and suggest.edit == e.pk %}{% else %}subtle{% endif %}">✓ Принять</button>
             <button type="submit" name="verdict" value="rejected" class="button small-button {% if e.verdict != 'rejected' %}subtle{% else %}danger{% endif %}">✗ Отклонить</button>
           </form>
-          {% endif %}
         </div>
       {% endfor %}
       {% if c.final_text %}<div class="info-row"><span class="mod-info-label">Итог</span><span class="info-value">{{ c.final_text }}</span></div>{% endif %}
     </div>
-    {% if not c.is_gold %}
     <form method="post" action="{% url 'clip-resolve' c.pk %}" style="margin-top:12px">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ request.get_full_path }}">
-      <textarea name="text" rows="2">{% if suggest and suggest.clip == c.pk %}{{ suggest.text }}{% elif c.final_text %}{{ c.final_text }}{% else %}{% with c.edits.all|first as f %}{{ f.text|default:c.draft_text }}{% endwith %}{% endif %}</textarea>
+      {% if c.is_gold %}<label for="gold-{{ c.pk }}">Исправить эталон</label>{% endif %}
+      <textarea id="gold-{{ c.pk }}" name="text" rows="2">{% if c.is_gold %}{{ c.gold_text }}{% elif suggest and suggest.clip == c.pk %}{{ suggest.text }}{% elif c.final_text %}{{ c.final_text }}{% else %}{% with c.edits.all|first as f %}{{ f.text|default:c.draft_text }}{% endwith %}{% endif %}</textarea>
       {% if suggest and suggest.clip == c.pk %}<input type="hidden" name="force" value="1">{% endif %}
-      <div class="action-row"><button type="submit" class="button small-button subtle">{% if suggest and suggest.clip == c.pk %}Всё равно записать мой текст{% else %}Записать свой вариант{% endif %}</button><span class="mod-info-label">если ни один вариант не верен — впишите правильный текст сам (тогда оба варианта отклоняются)</span></div>
+      <div class="action-row"><button type="submit" class="button small-button subtle">{% if c.is_gold %}Сохранить эталон и пересчитать оценки{% elif suggest and suggest.clip == c.pk %}Всё равно записать мой текст{% else %}Записать свой вариант{% endif %}</button><span class="mod-info-label">{% if c.is_gold %}Пересчитаются автоматические оценки; ручные решения редактора сохранятся.{% else %}Впишите итоговый текст — совпадающие с ним варианты принимаются, остальные отклоняются.{% endif %}</span></div>
     </form>
-    {% endif %}
   </div>
   {% empty %}
     <p class="empty-state">Здесь пусто.</p>
