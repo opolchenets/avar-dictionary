@@ -163,6 +163,12 @@ th{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mu
 .site-footer-bottom{border-top:1px solid var(--line);margin-top:28px;padding:16px;color:var(--muted);font-size:.85rem;text-align:center}
 .close-button,.close-card-button{background:none;border:0;font-size:1.2rem;color:var(--muted);cursor:pointer}
 .home-social-links{display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin:24px 0}
+.asr-demo-shell{display:flex;justify-content:center;padding:20px 0 48px}.asr-demo-card{width:min(720px,100%)}
+.asr-demo-card .lead{font-size:1.1rem;line-height:1.6}.muted,.asr-privacy{color:var(--muted)}
+.asr-quota{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;margin:18px 0;background:var(--surface-2);border-radius:10px}
+.asr-recorder{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:18px 0}.asr-recorder audio{width:100%}
+.asr-timer{font-variant-numeric:tabular-nums;font-weight:700;min-width:90px}.asr-result{padding:16px;border:1px solid var(--ok);background:var(--ok-bg);border-radius:12px;margin:18px 0}
+.asr-result p{font-family:var(--serif);font-size:1.35rem;margin:.5rem 0}.asr-privacy{font-size:.85rem;margin-top:18px}
 /* фрагменты */
 .clip-player audio{width:100%}
 .clip-text{font-family:var(--serif);font-size:1.3rem;line-height:1.5}

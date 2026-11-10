@@ -26,6 +26,7 @@ urlpatterns = [
     path("editor/", include("editor.urls")),
     path("clips/", include("clips.urls")),
     path("reading/", include("reading.urls")),
+    path("model/", include("asr_demo.urls")),
 ]
 
 if settings.DEBUG:

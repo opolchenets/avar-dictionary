@@ -1,0 +1,9 @@
+[Unit]
+Description=Delete expired Avar ASR trial recordings
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/avar
+ExecStart=/usr/bin/docker compose -f docker-compose.production.yml exec -T web python manage.py purge_asr_trials

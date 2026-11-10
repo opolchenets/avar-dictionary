@@ -140,6 +140,7 @@ celerybeat.pid
 # Environments
 .env
 transfer/
+private_asr_trials/
 backups/
 tmp*/
 *.tar.gz
