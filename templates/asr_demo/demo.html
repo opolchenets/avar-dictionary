@@ -80,7 +80,8 @@
     }, 100);
   });
   document.getElementById('asrForm').addEventListener('submit', () => {
-    submit.disabled = true; submit.textContent = 'Обработка…';
+    // Keep the clicked submitter enabled until the browser has sent the form.
+    setTimeout(() => { submit.textContent = 'Обработка…'; }, 0);
   });
 })();
 </script>
