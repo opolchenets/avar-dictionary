@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Сообщения о фразах — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <h1>Сообщения о фразах</h1>
+  <a href="{% url 'reading-review' %}">← Проверка озвучек</a>
+  {% for item in items %}
+  <section class="panel stack">
+    <h2>Фраза #{{ item.prompt_id }}</h2>
+    <p>{{ item.user.username|default:"Удалённый участник" }} · {{ item.created_at }}</p>
+    <p>Текст при отправке: {{ item.original_text }}</p>
+    {% if item.prompt.text != item.original_text %}<p class="error">Фраза уже изменена: {{ item.prompt.text }}. Это предложение нельзя применить автоматически.</p>{% endif %}
+    {% if item.note %}<p>{{ item.note }}</p>{% endif %}
+    <form method="post" action="{% url 'reading-feedback-verdict' item.pk %}" class="stack">
+      {% csrf_token %}
+      <label>Исправленный текст
+        <textarea name="text" rows="4" maxlength="10000" style="width:100%">{% if item.suggested_text %}{{ item.suggested_text }}{% else %}{{ item.original_text }}{% endif %}</textarea>
+      </label>
+      <p class="helptext">Новый текст увидят следующие участники. Тексты уже сделанных записей сохранятся.</p>
+      <div class="action-row">
+        <button class="button" name="action" value="apply">Применить исправление</button>
+        <button class="button subtle" name="action" value="disable">Снять фразу с записи</button>
+        <button class="button subtle" name="action" value="dismiss">Закрыть без изменения</button>
+      </div>
+    </form>
+  </section>
+  {% empty %}<p>Новых сообщений нет.</p>{% endfor %}
+  {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Назад</a>{% endif %}
+  {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Далее</a>{% endif %}
+</div>
+{% endblock %}

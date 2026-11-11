@@ -8,6 +8,21 @@
   </div>
   <div class="panel"><p class="read-text">{{ prompt.text }}</p>
     {% if prompt.source %}<p class="mod-info-label">{{ prompt.source }}</p>{% endif %}</div>
+  <details class="panel">
+    <summary>Опечатка или проблема с фразой?</summary>
+    <form method="post" action="{% url 'reading-feedback' prompt.pk %}" class="stack">
+      {% csrf_token %}
+      <input type="hidden" name="original_text" value="{{ prompt.text }}">
+      <label>Предложить исправленный текст (необязательно)
+        <textarea name="suggested_text" rows="4" maxlength="10000" style="width:100%">{{ prompt.text }}</textarea>
+      </label>
+      <label>Комментарий (необязательно)
+        <textarea name="note" rows="2" maxlength="1000" style="width:100%"></textarea>
+      </label>
+      <p class="helptext">Исправление проверит редактор. Можно отправить только сообщение о проблеме и перейти к следующей фразе.</p>
+      <button type="submit" class="button subtle">Отправить редактору и пропустить</button>
+    </form>
+  </details>
 
   {% if locked %}
     <div class="panel"><p>Вы уже озвучили эту фразу — статус: <b>{{ mine.get_status_display }}</b>.</p>
@@ -36,6 +51,7 @@
 <script>
 const $=id=>document.getElementById(id); let rec,chunks=[],blob=null,t0=0,dur=0,tick;
 const MAX={{ max_seconds }};
+const PROMPT_TEXT="{{ prompt.text|escapejs }}";
 function err(m){$('err').textContent=m;$('err').style.display=m?'block':'none';}
 $('btnRec').onclick=async()=>{
   err('');
@@ -54,6 +70,7 @@ $('btnSend').onclick=async()=>{
   const c=$('consent'); if(c&&!c.checked){err('Отметьте согласие на использование записи.');return;}
   $('btnSend').disabled=true;const fd=new FormData();
   fd.append('audio',blob,'rec.webm');fd.append('duration',dur.toFixed(2));if(c)fd.append('consent','1');
+  fd.append('prompt_text',PROMPT_TEXT);
   fd.append('csrfmiddlewaretoken','{{ csrf_token }}');
   try {
     const r=await fetch('',{method:'POST',body:fd});const j=await r.json().catch(()=>({}));

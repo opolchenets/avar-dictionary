@@ -21,7 +21,7 @@ class AsrTrial(models.Model):
 
     public_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="asr_trials")
-    audio = models.FileField(upload_to=trial_upload_path, storage=trial_storage)
+    audio = models.FileField(upload_to=trial_upload_path, storage=trial_storage, blank=True)
     duration = models.FloatField(default=0)
     result_text = models.TextField(blank=True)
     model_version = models.CharField(max_length=100, blank=True)

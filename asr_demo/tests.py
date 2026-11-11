@@ -39,7 +39,7 @@ class AsrDemoTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
     @patch("asr_demo.views.recognize", return_value=("Гьаб текст буго", "test-version"))
-    @patch("asr_demo.views.decode_trial", return_value=(b"source", b"\0" * 6400, 0.2))
+    @patch("asr_demo.views.decode_trial", return_value=(b"\0" * 6400, 0.2))
     def test_trial_is_saved_and_result_returned(self, decode, recognize):
         self.client.force_login(self.user)
         response = self.client.post(reverse("asr-demo"), {
@@ -50,8 +50,10 @@ class AsrDemoTests(TestCase):
         self.assertEqual(trial.status, AsrTrial.Status.READY)
         self.assertEqual(trial.result_text, "Гьаб текст буго")
         self.assertContains(response, "Гьаб текст буго")
+        self.assertFalse(trial.audio)
+        self.assertFalse(any(__import__('pathlib').Path(self.temp).rglob('*.audio')))
 
-    @patch("asr_demo.views.decode_trial", return_value=(b"source", b"\0" * 6400, 0.2))
+    @patch("asr_demo.views.decode_trial", return_value=(b"\0" * 6400, 0.2))
     def test_limit_is_enforced_server_side(self, decode):
         AsrTrial.objects.bulk_create([AsrTrial(user=self.user, audio=f"x/{n}") for n in range(15)])
         self.client.force_login(self.user)

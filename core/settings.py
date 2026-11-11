@@ -208,4 +208,4 @@ ASR_SERVICE_URL = os.getenv("ASR_SERVICE_URL", "").rstrip("/")
 ASR_INTERNAL_TOKEN = os.getenv("ASR_INTERNAL_TOKEN", "")
 ASR_TRIAL_ROOT = Path(os.getenv("ASR_TRIAL_ROOT", str(BASE_DIR / "private_asr_trials")))
 ASR_TRIAL_DAILY_LIMIT = 15
-ASR_TRIAL_RETENTION_HOURS = 48
+ASR_TRIAL_RETENTION_HOURS = 24  # Metadata/quota only; demo audio is not retained.

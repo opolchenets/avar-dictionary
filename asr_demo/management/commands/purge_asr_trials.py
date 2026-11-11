@@ -1,4 +1,5 @@
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -8,10 +9,19 @@ from asr_demo.models import AsrTrial
 
 
 class Command(BaseCommand):
-    help = "Удалить тестовые записи модели старше заданного срока"
+    help = "Удалить все сохранённые аудио демо и метаданные старше 24 часов"
 
     def handle(self, *args, **options):
-        cutoff = timezone.now() - timedelta(hours=settings.ASR_TRIAL_RETENTION_HOURS)
+        # Audio is no longer retained, including files left by the previous version.
+        for trial in AsrTrial.objects.exclude(audio="").iterator():
+            trial.audio.delete(save=True)
+        root = Path(settings.ASR_TRIAL_ROOT).resolve()
+        directory = root / "asr_trials"
+        if directory.exists() and not directory.is_symlink():
+            for path in directory.rglob("*"):
+                if path.is_file() and not path.is_symlink() and root in path.resolve().parents:
+                    path.unlink()
+        cutoff = timezone.now() - timedelta(hours=24)
         trials = AsrTrial.objects.filter(created_at__lt=cutoff)
         count = 0
         for trial in trials.iterator():

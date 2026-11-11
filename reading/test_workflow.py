@@ -34,7 +34,7 @@ class RecordingWorkflowTests(TestCase):
 
     def upload(self):
         return self.client.post(reverse("reading-record", args=[self.prompt.pk]),
-                                {"consent": "1", "duration": "999", "audio": wav_upload()})
+                                {"consent": "1", "duration": "999", "audio": wav_upload(), "prompt_text":self.prompt.text})
 
     def test_duration_measured_and_duplicate_not_saved(self):
         self.assertEqual(self.upload().status_code, 200)

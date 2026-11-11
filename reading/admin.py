@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Consent, Prompt, Recording
+from .models import Consent, Prompt, Recording, PromptFeedback
 
 
 @admin.register(Prompt)
@@ -17,3 +17,12 @@ class RecordingAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Consent)
+
+@admin.register(PromptFeedback)
+class PromptFeedbackAdmin(admin.ModelAdmin):
+    list_display = ("id", "prompt", "user", "status", "created_at")
+    list_filter = ("status",)
+    readonly_fields = ("prompt", "user", "original_text", "suggested_text", "note", "status", "reviewed_by", "reviewed_at", "created_at")
+
+    def has_add_permission(self, request):
+        return False

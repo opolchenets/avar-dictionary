@@ -23,7 +23,7 @@ def recognize(pcm):
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=25) as response:
+        with urllib.request.urlopen(request, timeout=60) as response:
             payload = json.load(response)
     except urllib.error.HTTPError as exc:
         if exc.code == 503:

@@ -2,6 +2,7 @@
 {% block title %}Проверка озвучек — Avar Corpus{% endblock %}
 {% block content %}
 <div class="stack">
+  <a class="button subtle" href="{% url 'reading-feedback-queue' %}">Сообщения о фразах</a>
   <div class="section-head"><div><p class="eyebrow">Редактор</p><h1>Проверка озвучек</h1></div>
     <a class="button ghost" href="{% url 'clip-review' %}">Проверка текста →</a></div>
   <div class="category-tabs">
@@ -14,7 +15,7 @@
   <div class="panel">
     <div class="panel-title"><span class="workspace-number">#{{ r.pk }} · {{ r.user.profile.display_name|default:r.user.username }} · {{ r.duration|floatformat:1 }} с{% if r.attempts > 1 %} · попытка {{ r.attempts }}{% endif %}</span>
       <span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
-    <p class="read-text" style="font-size:1.1rem">{{ r.prompt.text }}</p>
+    <p class="read-text" style="font-size:1.1rem">{{ r.spoken_text }}</p>
     <audio src="{{ r.audio.url }}" controls preload="none" style="width:100%"></audio>
     <form method="post" action="{% url 'reading-verdict' r.pk %}" class="action-row">
       {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
