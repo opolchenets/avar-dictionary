@@ -3,6 +3,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path("feedback/", views.PromptFeedbackQueue.as_view(), name="reading-feedback-queue"),
+    path("feedback/<int:pk>/", views.PromptFeedbackVerdict.as_view(), name="reading-feedback-verdict"),
+    path("<int:pk>/feedback/", views.PromptFeedbackView.as_view(), name="reading-feedback"),
     path("", views.ReadingHomeView.as_view(), name="reading-home"),
     path("next/", views.NextPromptView.as_view(), name="reading-next"),
     path("<int:pk>/", views.RecordView.as_view(), name="reading-record"),

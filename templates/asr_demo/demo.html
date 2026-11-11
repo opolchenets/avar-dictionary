@@ -4,8 +4,8 @@
 <div class="asr-demo-shell">
   <section class="panel asr-demo-card">
     <h1>Попробовать модель</h1>
-    <p class="lead">Запишите до 5 секунд аварской речи. Дообученная модель распознавания и четырёхграммная языковая модель преобразуют запись в текст.</p>
-    <p class="muted">Это демонстрация текущего прогресса: результат может содержать ошибки. Записи доступны только системе и автоматически удаляются через 2 дня.</p>
+    <p class="lead">Запишите до 5 секунд аварской речи или загрузите аудиофайл до 10 секунд и 15 МБ. Дообученная модель распознавания и четырёхграммная языковая модель преобразуют речь в текст.</p>
+    <p class="muted">Результат может содержать ошибки. Аудио используется только для распознавания. Временные файлы удаляются после обработки, в том числе при ошибке.</p>
     <div class="asr-quota"><strong>Доступно 15 попыток в день</strong><span>Осталось: {{ remaining }} из {{ limit }}</span></div>
 
     {% if error %}<div class="message error">{{ error }}</div>{% endif %}
@@ -19,7 +19,11 @@
 
     <form method="post" enctype="multipart/form-data" id="asrForm">
       {% csrf_token %}
-      <input type="file" name="audio" id="audioInput" accept="audio/*" hidden required>
+      <input type="hidden" name="input_kind" id="inputKind" value="upload">
+      <label>Загрузить аудио (до 10 секунд, 15 МБ)
+        <input type="file" name="audio" id="audioInput" accept="audio/*,.wav,.mp3,.m4a,.aac,.ogg,.opus,.flac,.webm,.aiff,.aif,.wma,.amr" required {% if not remaining or not service_configured %}disabled{% endif %}>
+      </label>
+      <p class="helptext">WAV, MP3, M4A/AAC, OGG/Opus, FLAC, WebM и другие форматы, поддерживаемые аудиодекодером.</p>
       <div class="asr-recorder">
         <div class="asr-timer" id="timer">0,0 / 5,0 с</div>
         <button type="button" class="button" id="recordButton" {% if not remaining or not service_configured %}disabled{% endif %}>● Начать запись</button>
@@ -43,13 +47,28 @@
   const input = document.getElementById('audioInput');
   const preview = document.getElementById('preview');
   const timer = document.getElementById('timer');
-  let recorder, stream, chunks = [], started, ticker;
+  const kind = document.getElementById('inputKind');
+  let recorder, stream, chunks = [], started, ticker, previewURL;
+  function showPreview(blob) {
+    if (previewURL) URL.revokeObjectURL(previewURL);
+    previewURL = URL.createObjectURL(blob); preview.src = previewURL; preview.hidden = false;
+  }
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    kind.value = 'upload'; submit.disabled = !file;
+    if (file && file.size > 15 * 1024 * 1024) {
+      alert('Файл превышает 15 МБ.'); resetRecording(); return;
+    }
+    if (file) { showPreview(file); reset.hidden = false; timer.textContent = 'Файл: до 10 секунд'; }
+  });
 
   function stopTracks() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; }
   function resetRecording() {
     clearInterval(ticker); stopTracks(); chunks = []; input.value = '';
     preview.hidden = true; preview.removeAttribute('src'); submit.disabled = true;
-    reset.hidden = true; record.hidden = false; timer.textContent = '0,0 / 5,0 с';
+    if (previewURL) URL.revokeObjectURL(previewURL); previewURL = null;
+    reset.hidden = true; record.hidden = false; record.textContent = '● Начать запись'; timer.textContent = '0,0 / 5,0 с';
+    input.disabled = false; kind.value = 'upload';
   }
   reset.addEventListener('click', resetRecording);
   record.addEventListener('click', async () => {
@@ -62,14 +81,14 @@
     }
     try { stream = await navigator.mediaDevices.getUserMedia({audio: true}); }
     catch (_) { alert('Разрешите сайту доступ к микрофону.'); return; }
-    chunks = []; recorder = new MediaRecorder(stream);
+    chunks = []; recorder = new MediaRecorder(stream); input.disabled = true; reset.hidden = true; submit.disabled = true;
     recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     recorder.onstop = () => {
       clearInterval(ticker); stopTracks();
       const blob = new Blob(chunks, {type: recorder.mimeType || 'audio/webm'});
       const file = new File([blob], 'trial.webm', {type: blob.type});
       const transfer = new DataTransfer(); transfer.items.add(file); input.files = transfer.files;
-      preview.src = URL.createObjectURL(blob); preview.hidden = false;
+      input.disabled = false; kind.value = 'recording'; showPreview(blob);
       submit.disabled = false; reset.hidden = false; record.hidden = true;
     };
     recorder.start(200); started = Date.now(); record.textContent = '■ Остановить';

@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!requirements.txt
+!bundle.py
+!serve.py
+!recognize.py

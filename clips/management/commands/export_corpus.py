@@ -26,5 +26,5 @@ class Command(BaseCommand):
             writer = csv.writer(f)
             writer.writerow(["id", "audio", "text", "seconds", "source", "speaker_id"])
             for rec in Recording.objects.filter(status="accepted").select_related("prompt").iterator():
-                writer.writerow([rec.pk, rec.audio.name, fix_palochka(rec.prompt.text), rec.duration, rec.prompt.source, rec.user_id])
+                writer.writerow([rec.pk, rec.audio.name, fix_palochka(rec.spoken_text), rec.duration, rec.prompt.source, rec.user_id])
         self.stdout.write(self.style.SUCCESS(str(directory)))

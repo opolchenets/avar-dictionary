@@ -14,7 +14,7 @@ from django.views.generic import ListView
 
 from clips.views import is_editor
 
-from .models import Consent, Prompt, Recording
+from .models import Consent, Prompt, Recording, PromptFeedback
 
 MAX_SECONDS = 30
 
@@ -23,7 +23,9 @@ def next_prompt_for(user):
     """Фраза, у которой ещё нет принятой или ждущей проверки озвучки, и которую этот человек не читал."""
     mine = Recording.objects.filter(user=user).values_list("prompt_id", flat=True)
     busy = Recording.objects.filter(status__in=["accepted", "pending"]).values_list("prompt_id", flat=True)
-    return (Prompt.objects.filter(is_active=True).exclude(id__in=mine).exclude(id__in=busy).order_by("id").first())
+    reported = PromptFeedback.objects.filter(user=user, status="pending").values_list("prompt_id", flat=True)
+    return (Prompt.objects.filter(is_active=True).exclude(id__in=mine).exclude(id__in=busy)
+            .exclude(id__in=reported).order_by("id").first())
 
 
 class ReadingHomeView(View):
@@ -78,7 +80,11 @@ class RecordView(LoginRequiredMixin, View):
         try:
             with transaction.atomic():
                 # Serialize submissions and editorial decisions for this phrase.
-                Prompt.objects.select_for_update().get(pk=prompt.pk)
+                prompt = Prompt.objects.select_for_update().get(pk=prompt.pk)
+                if not prompt.is_active:
+                    return JsonResponse({"error": "Фраза снята с записи. Выберите следующую."}, status=409)
+                if request.POST.get("prompt_text", "") != prompt.text:
+                    return JsonResponse({"error": "Текст изменился. Обновите страницу и запишите фразу заново."}, status=409)
                 rec = Recording.objects.filter(prompt=prompt, user=request.user).first()
                 if rec and rec.status != Recording.Status.REDO:
                     return JsonResponse({"error": "Эта фраза уже озвучена"}, status=400)
@@ -91,6 +97,7 @@ class RecordView(LoginRequiredMixin, View):
                 else:
                     rec = Recording(prompt=prompt, user=request.user)
                 rec.duration = dur
+                rec.text_snapshot = prompt.text
                 rec.audio.save(f"{prompt.pk}_{request.user.pk}.{ext}", ContentFile(content), save=False)
                 new_name = rec.audio.name
                 rec.save()
@@ -139,3 +146,70 @@ class VerdictView(UserPassesTestMixin, View):
             rec.reviewed_by, rec.reviewed_at = request.user, timezone.now()
             rec.save(update_fields=["status", "note", "reviewed_by", "reviewed_at", "updated_at"])
         return redirect(get_safe_redirect(request, reverse("reading-review")))
+
+
+class PromptFeedbackView(LoginRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request, pk):
+        prompt = get_object_or_404(Prompt.objects.select_for_update(), pk=pk, is_active=True)
+        proposed = request.POST.get("suggested_text", "").strip()
+        note = request.POST.get("note", "").strip()
+        if len(proposed) > 10000 or len(note) > 1000:
+            messages.error(request, "Слишком длинный текст или комментарий.")
+            return redirect("reading-record", pk=pk)
+        original = request.POST.get("original_text", "")
+        if original != prompt.text:
+            messages.error(request, "Текст уже изменился. Проверьте актуальную фразу.")
+            return redirect("reading-record", pk=pk)
+        if proposed == prompt.text:
+            proposed = ""
+        feedback, created = PromptFeedback.objects.get_or_create(
+            prompt=prompt, user=request.user, status="pending",
+            defaults={"original_text": prompt.text, "suggested_text": proposed, "note": note})
+        messages.success(request, "Сообщение отправлено редактору." if created else "Ваше сообщение уже ждёт проверки.")
+        return redirect("reading-next")
+
+
+class PromptFeedbackQueue(UserPassesTestMixin, ListView):
+    template_name = "reading/feedback.html"
+    context_object_name = "items"
+    paginate_by = 30
+
+    def test_func(self):
+        return is_editor(self.request.user)
+
+    def get_queryset(self):
+        return PromptFeedback.objects.filter(status="pending").select_related("prompt", "user")
+
+
+class PromptFeedbackVerdict(UserPassesTestMixin, View):
+    def test_func(self):
+        return is_editor(self.request.user)
+
+    @transaction.atomic
+    def post(self, request, pk):
+        item = get_object_or_404(PromptFeedback, pk=pk)
+        prompt = Prompt.objects.select_for_update().get(pk=item.prompt_id)
+        item = PromptFeedback.objects.select_for_update().get(pk=pk)
+        if item.status != "pending":
+            return redirect("reading-feedback-queue")
+        action = request.POST.get("action")
+        if action == "apply":
+            text = request.POST.get("text", "").strip()
+            if not text or len(text) > 10000 or prompt.text != item.original_text:
+                messages.error(request, "Исправление не применено: пустой текст или фраза уже изменена. Рассмотрите сообщение заново.")
+                return redirect("reading-feedback-queue")
+            prompt.text = text
+            prompt.save(update_fields=["text"])
+            item.status = "applied"
+        elif action == "disable":
+            prompt.is_active = False
+            prompt.save(update_fields=["is_active"])
+            item.status = "applied"
+        elif action == "dismiss":
+            item.status = "dismissed"
+        else:
+            return redirect("reading-feedback-queue")
+        item.reviewed_by, item.reviewed_at = request.user, timezone.now()
+        item.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+        return redirect("reading-feedback-queue")

@@ -3,17 +3,19 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.files.base import ContentFile
 from django.db import transaction
 from django.shortcuts import render
 from django.utils import timezone
 from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from .audio import decode_trial
 from .client import AsrUnavailable, recognize
 from .models import AsrTrial
 
 
+@method_decorator(never_cache, name="dispatch")
 class AsrDemoView(LoginRequiredMixin, View):
     template_name = "asr_demo/demo.html"
 
@@ -35,7 +37,7 @@ class AsrDemoView(LoginRequiredMixin, View):
 
     def post(self, request):
         try:
-            source, pcm, duration = decode_trial(request.FILES.get("audio"))
+            pcm, duration = decode_trial(request.FILES.get("audio"), recording=request.POST.get("input_kind") == "recording")
         except ValueError as exc:
             return render(request, self.template_name, self.context(request, error=str(exc)), status=400)
 
@@ -48,7 +50,6 @@ class AsrDemoView(LoginRequiredMixin, View):
                               self.context(request, error="Лимит исчерпан. Новая попытка появится через 24 часа."),
                               status=429)
             trial = AsrTrial(user=request.user, duration=duration)
-            trial.audio.save("recording.audio", ContentFile(source), save=False)
             trial.save()
 
         try:

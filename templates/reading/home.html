@@ -42,7 +42,7 @@
       <div class="stat-card"><div class="big-stat-value" style="color:var(--muted)">{{ my.pending }}</div><div class="big-stat-label">Ждут проверки</div></div>
     </div>
     {% for r in recent %}
-      <div class="info-row"><span>{{ r.prompt.text|truncatechars:70 }}</span><span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
+      <div class="info-row"><span>{{ r.spoken_text|truncatechars:70 }}</span><span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
     {% empty %}<p class="empty-state">Пока нет записей.</p>{% endfor %}
   </div>
   {% endif %}
