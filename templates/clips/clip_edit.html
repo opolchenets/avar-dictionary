@@ -32,6 +32,7 @@
 
   {% if locked %}
     <div class="panel"><p>Этот фрагмент уже закрыт.</p>
+      {% if is_editor %}<form method="post">{% csrf_token %}<button class="button subtle" name="action" value="report">⚑ Отметить дефект аудио</button></form>{% endif %}
       <a class="button" href="{% url 'clip-next' %}">Следующий →</a></div>
   {% else %}
   {% if mine.reviewer_note %}

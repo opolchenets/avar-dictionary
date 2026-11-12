@@ -26,7 +26,7 @@ class Clip(models.Model):
         DISPUTED = "disputed", "Спор — у редактора"
         RESOLVED = "resolved", "Готово (редактор)"
 
-    REQUIRED_EDITS = 2
+    REQUIRED_EDITS = 3
 
     batch = models.ForeignKey(Batch, on_delete=models.PROTECT, related_name="clips", verbose_name="Пачка")
     audio = models.FileField("Аудио", upload_to="clips/")
@@ -82,12 +82,13 @@ class ClipEdit(models.Model):
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name="clip_reviews", verbose_name="Оценил")
     reviewed_at = models.DateTimeField("Оценено", null=True, blank=True)
+    auto_accepted = models.BooleanField("Принято по трём совпадениям", default=False)
     reviewer_note = models.CharField("Что исправить", max_length=1000, blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True)
 
     @property
     def is_reviewed(self):
-        return self.reviewed_by_id is not None and self.verdict in (self.Verdict.ACCEPTED, self.Verdict.REJECTED)
+        return (self.reviewed_by_id is not None or self.auto_accepted) and self.verdict in (self.Verdict.ACCEPTED, self.Verdict.REJECTED)
 
     class Meta:
         verbose_name = "Правка фрагмента"

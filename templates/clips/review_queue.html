@@ -2,14 +2,14 @@
 {% load review_diff %}
 {% block title %}Проверка фрагментов — Avar Corpus{% endblock %}
 {% block content %}
-<style>.review-difference{background:#f9a8d4;color:#4a1030;border-radius:3px;padding:0 1px}</style>
-<p class="helptext">Розовым отмечены буквенные расхождения с эталоном, итогом редактора или другим вариантом. Это подсказка, не оценка. Пунктуация, пробелы и регистр не подсвечиваются.</p>
+<style>.review-difference{background:#f9a8d4;color:#4a1030;border-radius:3px;padding:0 1px}.edit-text{white-space:pre-wrap}</style>
+<p class="helptext">Розовым отмечены расхождения, включая пробелы. Лишний пробел показан точкой ·. Это подсказка, не оценка.</p>
 <div class="stack">
   <div class="section-head">
     <div><p class="eyebrow">Редактор</p><h1>Проверка фрагментов</h1></div>
     <a class="button ghost" href="/admin/clips/batch/">Пачки</a>
   </div>
-  <p class="mod-info-label">Каждая отправленная правка ждёт решения редактора. Автооценка — только предварительная подсказка. Счётчики показывают количество правок участников.</p>
+  <p class="mod-info-label">Три точных совпадения участников принимаются автоматически. Остальные ответы ждут редактора или новых участников. Счётчики показывают количество правок.</p>
   <div class="category-tabs">
     <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="?status=pending&amp;kind={{ kind }}">Ждут оценки ({{ counts.pending }})</a>
     <a class="category-tab {% if status == 'redo' %}is-active{% endif %}" href="?status=redo&amp;kind={{ kind }}">На исправлении ({{ counts.redo }})</a>
@@ -44,7 +44,7 @@
           <div class="edit-who"><span class="mod-info-label">{{ e.user.profile.display_name|default:e.user.username }}</span>
             <span class="status {% if e.is_reviewed or e.verdict == 'redo' %}verdict-{{ e.verdict }}{% else %}verdict-pending{% endif %}">{% if e.is_reviewed or e.verdict == 'redo' %}{{ e.get_verdict_display }}{% else %}Ждёт оценки{% endif %}</span>
             {% if c.is_gold %}<span class="mod-info-label">Автопроверка: {{ e.errors }} буквенных расхождений</span>{% endif %}
-            {% if e.is_reviewed %}<span class="mod-info-label">Решение редактора</span>{% endif %}</div>
+            {% if e.auto_accepted %}<span class="mod-info-label">Три совпадения</span>{% elif e.is_reviewed %}<span class="mod-info-label">Решение редактора</span>{% endif %}</div>
           <div class="edit-text">{% if c.is_gold %}{% review_diff e.text c.gold_text %}{% elif c.final_text %}{% review_diff e.text c.final_text %}{% elif c.review_edits|length > 1 %}{% for other in c.review_edits %}{% if other.pk != e.pk %}<p>Сравнение с {{ other.user.username }}: {% review_diff e.text other.text %}</p>{% endif %}{% endfor %}{% else %}{{ e.text }}{% endif %}</div>
           {% if e.reviewer_note %}<p class="helptext">Замечание редактора: {{ e.reviewer_note }}</p>{% endif %}
           {% if suggest and suggest.edit == e.pk %}
