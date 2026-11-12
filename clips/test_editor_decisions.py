@@ -43,11 +43,11 @@ class EditorDecisionTests(TestCase):
         self.assertEqual(user_stats(self.first)["accepted"], 0)
         self.assertEqual(user_rows(), [])
 
-    def test_matching_regular_answers_are_only_preliminary(self):
+    def test_two_matching_answers_wait_for_third(self):
         for user in (self.first, self.second):
             submit_edit(self.normal, user, "same")
         self.normal.refresh_from_db()
-        self.assertEqual(self.normal.status, "agreed")
+        self.assertEqual(self.normal.status, "open")
         self.assertFalse(self.normal.is_done)
         self.assertEqual(self.normal.final_text, "")
         self.assertEqual(self.normal.edits.filter(verdict="pending").count(), 2)

@@ -32,8 +32,8 @@ def _smooth(acc, judged, site):
 def user_rows():
     User = get_user_model()
     ed = {r["user"]: r for r in ClipEdit.objects.values("user").annotate(
-        acc=Count("id", filter=Q(verdict="accepted", reviewed_by__isnull=False)),
-        judged=Count("id", filter=Q(verdict__in=["accepted", "rejected"], reviewed_by__isnull=False)))}
+        acc=Count("id", filter=Q(verdict="accepted") & (Q(reviewed_by__isnull=False) | Q(auto_accepted=True))),
+        judged=Count("id", filter=Q(verdict__in=["accepted", "rejected"]) & (Q(reviewed_by__isnull=False) | Q(auto_accepted=True))))}
     rc = {r["user"]: r for r in Recording.objects.values("user").annotate(
         acc=Count("id", filter=Q(status="accepted")),
         judged=Count("id", filter=Q(status__in=["accepted", "rejected"])),

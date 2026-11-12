@@ -7,7 +7,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic import CreateView, TemplateView
 from django.urls import reverse_lazy
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.http import JsonResponse
@@ -132,8 +132,8 @@ def get_user_profile_data(user):
 def _work_stats(user):
     e = ClipEdit.objects.filter(user=user)
     r = Recording.objects.filter(user=user)
-    e_acc = e.filter(verdict="accepted", reviewed_by__isnull=False).count()
-    e_j = e.filter(verdict__in=["accepted", "rejected"], reviewed_by__isnull=False).count()
+    e_acc = e.filter(verdict="accepted").filter(Q(reviewed_by__isnull=False) | Q(auto_accepted=True)).count()
+    e_j = e.filter(verdict__in=["accepted", "rejected"]).filter(Q(reviewed_by__isnull=False) | Q(auto_accepted=True)).count()
     r_acc, r_j = r.filter(status="accepted").count(), r.filter(status__in=["accepted", "rejected"]).count()
     return {
         "w_edits": e.count(), "w_edits_acc": e_acc,

@@ -24,7 +24,7 @@ class ClipHomeView(View):
         done = Clip.objects.filter(is_gold=False, status=Clip.Status.RESOLVED).count()
         ctx = {
             "total": total, "done": done, "left": total - done,
-            "pending": ClipEdit.objects.exclude(verdict="redo").filter(Q(verdict="pending") | Q(reviewed_by__isnull=True)).count(),
+            "pending": ClipEdit.objects.filter(Q(verdict="pending") | Q(verdict="accepted", reviewed_by__isnull=True, auto_accepted=False)).count(),
             "batches": Batch.objects.filter(is_open=True).annotate(
                 n=Count("clips", distinct=True),
                 d=Count("clips", distinct=True, filter=Q(clips__status="resolved")
@@ -58,6 +58,7 @@ class ClipEditView(LoginRequiredMixin, View):
         locked = not retry and (clip.status != Clip.Status.OPEN or (mine is not None and mine.verdict != ClipEdit.Verdict.PENDING))
         return render(request, "clips/clip_edit.html", {
             "clip": clip, "mine": mine, "locked": locked,
+            "is_editor": is_editor(request.user),
             "text": mine.text if mine else clip.draft_text,
         })
 
@@ -124,11 +125,11 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
     @staticmethod
     def by_status(edits, status):
         if status == "pending":
-            return edits.exclude(verdict="redo").filter(Q(verdict="pending") | Q(reviewed_by__isnull=True))
+            return edits.filter(Q(verdict="pending") | Q(verdict="accepted", reviewed_by__isnull=True, auto_accepted=False))
         if status == "redo":
             return edits.filter(verdict="redo")
         if status in ("accepted", "rejected"):
-            return edits.filter(verdict=status, reviewed_by__isnull=False)
+            return edits.filter(verdict=status).filter(Q(reviewed_by__isnull=False) | Q(auto_accepted=True))
         return edits
 
     def get_queryset(self):

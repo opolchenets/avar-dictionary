@@ -12,17 +12,18 @@ class Command(BaseCommand):
         parser.add_argument("--apply", action="store_true")
 
     def handle(self, apply, **kwargs):
-        automatic = ClipEdit.objects.filter(reviewed_by__isnull=True).exclude(verdict="redo")
+        automatic = ClipEdit.objects.filter(reviewed_by__isnull=True, auto_accepted=False).exclude(verdict="redo")
         reset = automatic.exclude(verdict="pending").count()
         points = PointLedger.objects.filter(reason="clip_accepted",
-            clip__edits__reviewed_by__isnull=True,
+            clip__edits__reviewed_by__isnull=True, clip__edits__auto_accepted=False,
             clip__edits__user_id=F('user_id')).distinct().count()
         if apply:
             actual_reset = actual_removed = 0
-            for pk in Clip.objects.filter(edits__isnull=False, edits__reviewed_by__isnull=True).distinct().values_list("pk", flat=True).iterator():
+            for pk in Clip.objects.filter(edits__isnull=False, edits__reviewed_by__isnull=True,
+                                          edits__auto_accepted=False).distinct().values_list("pk", flat=True).iterator():
                 with transaction.atomic():
                     clip = Clip.objects.select_for_update().get(pk=pk)
-                    for edit in clip.edits.filter(reviewed_by__isnull=True).exclude(verdict="redo"):
+                    for edit in clip.edits.filter(reviewed_by__isnull=True, auto_accepted=False).exclude(verdict="redo"):
                         actual_reset += edit.verdict != "pending"
                         ClipEdit.objects.filter(pk=edit.pk).update(verdict="pending", reviewed_at=None)
                         removed, _ = PointLedger.objects.filter(user_id=edit.user_id, clip=clip, reason="clip_accepted").delete()

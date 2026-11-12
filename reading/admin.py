@@ -8,6 +8,7 @@ class PromptAdmin(admin.ModelAdmin):
     list_display = ("id", "text", "source", "is_active")
     list_filter = ("source", "is_active")
     search_fields = ("text",)
+    fields = ("text", "source", "is_active")
 
 
 @admin.register(Recording)
