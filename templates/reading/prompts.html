@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Тексты для прочтения — Avar Corpus{% endblock %}
+{% block content %}
+<div class="page-narrow stack">
+  <div class="section-head"><h1>Тексты для прочтения</h1><a href="{% url 'reading-home' %}">← Прочтение</a></div>
+  <p class="helptext">Исправленный текст увидят следующие участники. Текст уже отправленных записей сохраняется отдельно.</p>
+  <form method="get" class="panel"><label for="prompt-search">Найти фразу или источник</label>
+    <input id="prompt-search" name="q" value="{{ q }}"><button class="button">Найти</button></form>
+  {% for prompt in prompts %}
+  <section class="panel stack" id="prompt-{{ prompt.pk }}">
+    <h2>Фраза #{{ prompt.pk }}</h2><p class="helptext">{{ prompt.source }} · {% if prompt.is_active %}выдаётся{% else %}снята с выдачи{% endif %}</p>
+    <form method="post" action="{% url 'reading-prompt-update' prompt.pk %}" class="stack">
+      {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}#prompt-{{ prompt.pk }}"><input type="hidden" name="original_text" value="{{ prompt.text }}">
+      <label for="prompt-text-{{ prompt.pk }}">Текст фразы</label>
+      <textarea id="prompt-text-{{ prompt.pk }}" name="text" rows="4" maxlength="10000" style="width:100%" required>{{ prompt.text }}</textarea>
+      <button type="submit" class="button">Сохранить исправление</button>
+    </form>
+  </section>
+  {% empty %}<p class="empty-state">Фразы не найдены.</p>{% endfor %}
+  {% if page_obj.has_previous %}<a href="?q={{ q|urlencode }}&amp;page={{ page_obj.previous_page_number }}">Назад</a>{% endif %}
+  {% if page_obj.has_next %}<a href="?q={{ q|urlencode }}&amp;page={{ page_obj.next_page_number }}">Далее</a>{% endif %}
+</div>
+{% endblock %}

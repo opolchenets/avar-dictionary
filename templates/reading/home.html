@@ -5,6 +5,7 @@
   <div class="section-head">
     <h1>Прочтение</h1>
     {% if pending_review is not None %}<a class="button ghost" href="{% url 'reading-review' %}">На проверку: {{ pending_review }}</a>{% endif %}
+    {% if can_manage_prompts %}<a class="button ghost" href="{% url 'reading-prompts' %}">Исправить текст фраз</a>{% endif %}
   </div>
   <div class="stats-grid">
     <div class="stat-card"><div class="big-stat-value">{{ total }}</div><div class="big-stat-label">Фраз для чтения</div></div>
