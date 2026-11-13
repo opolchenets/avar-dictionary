@@ -34,6 +34,7 @@ class ReadingHomeView(View):
                "done": Prompt.objects.filter(recordings__status="accepted").distinct().count(),
                "minutes": round((Recording.objects.filter(status="accepted").aggregate(s=Sum("duration"))["s"] or 0) / 60, 1)}
         if request.user.is_authenticated:
+            ctx["can_manage_prompts"] = is_editor(request.user)
             mine = Recording.objects.filter(user=request.user)
             ctx["my"] = {
                 "total": mine.count(),
@@ -45,6 +46,46 @@ class ReadingHomeView(View):
             ctx["recent"] = mine.select_related("prompt")[:10]
             ctx["pending_review"] = Recording.objects.filter(status="pending").count() if is_editor(request.user) else None
         return render(request, "reading/home.html", ctx)
+
+
+class PromptManageView(UserPassesTestMixin, ListView):
+    template_name = "reading/prompts.html"
+    context_object_name = "prompts"
+    paginate_by = 30
+
+    def test_func(self):
+        return is_editor(self.request.user)
+
+    def get_queryset(self):
+        query = self.request.GET.get("q", "").strip()
+        prompts = Prompt.objects.all().order_by("pk")
+        if query:
+            prompts = prompts.filter(Q(text__icontains=query) | Q(source__icontains=query))
+        return prompts
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["q"] = self.request.GET.get("q", "").strip()
+        return context
+
+
+class PromptTextUpdateView(UserPassesTestMixin, View):
+    def test_func(self):
+        return is_editor(self.request.user)
+
+    @transaction.atomic
+    def post(self, request, pk):
+        prompt = get_object_or_404(Prompt.objects.select_for_update(), pk=pk)
+        text = request.POST.get("text", "").strip()
+        if not text or len(text) > 10000:
+            messages.error(request, "Текст должен содержать от 1 до 10000 знаков.")
+        elif request.POST.get("original_text") != prompt.text:
+            messages.error(request, "Фраза уже изменилась. Обновите страницу перед сохранением.")
+        else:
+            prompt.text = text
+            prompt.save(update_fields=["text"])
+            messages.success(request, f"Фраза #{prompt.pk} обновлена. Старые записи сохраняют свой текст.")
+        return redirect(get_safe_redirect(request, reverse("reading-prompts")))
 
 
 class NextPromptView(LoginRequiredMixin, View):
