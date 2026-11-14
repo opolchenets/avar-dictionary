@@ -4,7 +4,7 @@
     score = M·m + k·N·n
     M — принятые правки текста, m — доля принятых правок
     N — минуты принятой озвучки, n — доля принятых озвучек
-    k = 10
+    k = 8
 
 Новичкам (меньше SMOOTH_N оценённых работ) доля сглаживается к средней по сайту:
     m = (j·m_личн + (SMOOTH_N − j)·m_сайт) / SMOOTH_N,  j — сколько работ оценено.
@@ -18,7 +18,7 @@ from django.db.models import Count, Q, Sum
 from clips.models import ClipEdit
 from reading.models import Recording
 
-K = 10
+K = 8
 SMOOTH_N = 10
 
 
