@@ -15,10 +15,11 @@
   <div class="panel">
     <div class="panel-title"><span class="workspace-number">#{{ r.pk }} · {{ r.user.profile.display_name|default:r.user.username }} · {{ r.duration|floatformat:1 }} с{% if r.attempts > 1 %} · попытка {{ r.attempts }}{% endif %}</span>
       <span class="status verdict-{{ r.status }}">{{ r.get_status_display }}</span></div>
-    <p class="read-text" style="font-size:1.1rem">{{ r.spoken_text }}</p>
+    <p class="helptext">Текст этой записи. Исправьте его по услышанному перед принятием; именно он попадёт в экспорт.</p>
     <audio src="{{ r.audio.url }}" controls preload="none" style="width:100%"></audio>
     <form method="post" action="{% url 'reading-verdict' r.pk %}" class="action-row">
       {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <textarea name="recording_text" rows="3" maxlength="10000" style="width:100%">{{ r.spoken_text }}</textarea>
       <input type="text" name="note" placeholder="Комментарий (для переозвучки)" value="{{ r.note }}" style="flex:1 1 220px">
       <button type="submit" name="verdict" value="accepted" class="button small-button">✓ Принять</button>
       <button type="submit" name="verdict" value="redo" class="button small-button subtle">↻ Переозвучить</button>

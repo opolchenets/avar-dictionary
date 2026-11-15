@@ -183,9 +183,15 @@ class VerdictView(UserPassesTestMixin, View):
         rec.refresh_from_db()
         v = request.POST.get("verdict")
         if v in ("accepted", "redo", "rejected"):
+            corrected = request.POST.get("recording_text", "").strip()
+            if v == "accepted" and (not corrected or len(corrected) > 10000):
+                messages.error(request, "Укажите текст озвучки (до 10000 знаков).")
+                return redirect(get_safe_redirect(request, reverse("reading-review")))
             rec.status, rec.note = v, request.POST.get("note", "")[:255]
+            if v == "accepted":
+                rec.text_snapshot = corrected
             rec.reviewed_by, rec.reviewed_at = request.user, timezone.now()
-            rec.save(update_fields=["status", "note", "reviewed_by", "reviewed_at", "updated_at"])
+            rec.save(update_fields=["status", "note", "text_snapshot", "reviewed_by", "reviewed_at", "updated_at"])
         return redirect(get_safe_redirect(request, reverse("reading-review")))
 
 
