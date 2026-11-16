@@ -25,12 +25,15 @@ class ClipHomeView(View):
         ctx = {
             "total": total, "done": done, "left": total - done,
             "pending": ClipEdit.objects.filter(Q(verdict="pending") | Q(verdict="accepted", reviewed_by__isnull=True, auto_accepted=False)).count(),
-            "batches": Batch.objects.filter(is_open=True).annotate(
-                n=Count("clips", distinct=True),
-                d=Count("clips", distinct=True, filter=Q(clips__status="resolved")
-                        | Q(clips__is_gold=True, clips__edits__reviewed_by__isnull=False,
-                            clips__edits__verdict__in=["accepted", "rejected"]))).filter(n__gt=0),
+            "batches": Batch.objects.annotate(
+                n=Count("clips", distinct=True, filter=Q(clips__is_gold=False)),
+                d=Count("clips", distinct=True, filter=Q(clips__is_gold=False, clips__status="resolved")),
+                seconds=Sum("clips__duration", filter=Q(clips__is_gold=False, clips__status="resolved")),
+                total_seconds=Sum("clips__duration", filter=Q(clips__is_gold=False))).filter(n__gt=0),
         }
+        for batch in ctx["batches"]:
+            batch.minutes = round((batch.seconds or 0) / 60, 1)
+            batch.total_minutes = round((batch.total_seconds or 0) / 60, 1)
         if request.user.is_authenticated:
             ctx["redo_edits"] = ClipEdit.objects.filter(user=request.user, verdict="redo").select_related("clip", "clip__batch")
             ctx["my"] = user_stats(request.user)

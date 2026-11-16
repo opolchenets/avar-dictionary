@@ -12,6 +12,17 @@
     <div class="stat-card"><div class="big-stat-value" style="color:var(--ok)">{{ done }}</div><div class="big-stat-label">Озвучено</div></div>
     <div class="stat-card"><div class="big-stat-value">{{ minutes }}</div><div class="big-stat-label">Минут принято</div></div>
   </div>
+  {% if reading_sources %}
+  <div class="panel">
+    <h2>Собрано по произведениям</h2>
+    {% for source in reading_sources %}
+      <div class="info-row">
+        <span>{{ source.label }}</span>
+        <span class="info-value">{{ source.accepted_recordings }} аудио · {{ source.done }} / {{ source.total }} фраз · {{ source.minutes }} мин принято</span>
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
   <div class="panel">
     <h2>Как это работает</h2>
     <ol class="how-list">
