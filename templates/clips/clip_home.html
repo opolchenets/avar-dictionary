@@ -37,11 +37,11 @@
 
   {% if batches %}
   <div class="panel">
-    <div class="panel-title"><h2 style="margin:0">Открытые пачки</h2></div>
+    <div class="panel-title"><h2 style="margin:0">Материал по произведениям</h2></div>
     {% for b in batches %}
       <div class="info-row">
         <span>{{ b.name }}{% if b.source %} <span class="mod-info-label">· {{ b.source }}</span>{% endif %}</span>
-        <span class="info-value">{{ b.d }} / {{ b.n }}</span>
+        <span class="info-value">{{ b.d }} / {{ b.n }} фрагментов · {{ b.minutes }} / {{ b.total_minutes }} мин</span>
       </div>
       <div class="progress"><span style="width:{% widthratio b.d b.n|default:1 100 %}%"></span></div>
     {% endfor %}

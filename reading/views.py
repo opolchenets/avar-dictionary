@@ -4,7 +4,7 @@ from .audio_validation import validate_audio
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.files.base import ContentFile
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -30,9 +30,20 @@ def next_prompt_for(user):
 
 class ReadingHomeView(View):
     def get(self, request):
+        source_rows = list(Prompt.objects.filter(is_active=True).values("source").annotate(
+            total=Count("id"), done=Count("recordings__prompt_id", filter=Q(recordings__status="accepted"), distinct=True),
+            accepted_recordings=Count("recordings", filter=Q(recordings__status="accepted"))
+        ).order_by("source"))
+        source_minutes = {row["prompt__source"] or "Без указания источника": (row["seconds"] or 0) / 60
+                          for row in Recording.objects.filter(status="accepted").values("prompt__source").annotate(
+                              seconds=Sum("duration"))}
+        for row in source_rows:
+            row["label"] = row["source"] or "Без указания источника"
+            row["minutes"] = round(source_minutes.get(row["label"], 0), 1)
         ctx = {"total": Prompt.objects.filter(is_active=True).count(),
                "done": Prompt.objects.filter(recordings__status="accepted").distinct().count(),
-               "minutes": round((Recording.objects.filter(status="accepted").aggregate(s=Sum("duration"))["s"] or 0) / 60, 1)}
+               "minutes": round((Recording.objects.filter(status="accepted").aggregate(s=Sum("duration"))["s"] or 0) / 60, 1),
+               "reading_sources": source_rows}
         if request.user.is_authenticated:
             ctx["can_manage_prompts"] = is_editor(request.user)
             mine = Recording.objects.filter(user=request.user)
