@@ -19,6 +19,8 @@ class Command(BaseCommand):
         missing = []
         for model in [Clip, Recording]:
             for name in model.objects.values_list("audio", flat=True):
+                if not name:
+                    continue  # Archived contributions retain their decisions and duration.
                 path = (media / name).resolve()
                 if media not in path.parents or not path.is_file():
                     missing.append(name)

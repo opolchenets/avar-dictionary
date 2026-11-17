@@ -17,7 +17,7 @@ def next_clip_for(user, skip_clip_id=None):
     if redo:
         return redo.clip
     done_ids = ClipEdit.objects.filter(user=user).values_list("clip_id", flat=True)
-    qs = (Clip.objects.filter(batch__is_open=True, status=Clip.Status.OPEN)
+    qs = (Clip.objects.filter(batch__is_open=True, status=Clip.Status.OPEN).exclude(audio="")
           .exclude(id__in=done_ids).exclude(pk=skip_clip_id)
           .exclude(id__in=AudioIssue.objects.filter(reviewed_at__isnull=True).values("clip_id"))
           .annotate(n=Count("edits")))

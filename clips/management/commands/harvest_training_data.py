@@ -34,7 +34,7 @@ class Command(BaseCommand):
             clips = (Clip.objects.filter(is_gold=False, status=Clip.Status.RESOLVED)
                      .filter(Q(batch__name__icontains="Фазу") | Q(batch__name__icontains="ГӀаздада"))
                      .exclude(id__in=AudioIssue.objects.filter(reviewed_at__isnull=True).values("clip_id"))
-                     .exclude(final_text="").select_related("batch").order_by("pk"))
+                     .exclude(final_text="").exclude(audio="").select_related("batch").order_by("pk"))
             for clip in clips.iterator():
                 # One audio row per clip, even if several contributors were accepted.
                 matching = (ClipEdit.objects.filter(clip=clip, verdict="accepted", text=clip.final_text)
@@ -49,7 +49,7 @@ class Command(BaseCommand):
             writer = csv.writer(file)
             writer.writerow(["id", "audio", "text_at_recording", "seconds", "source", "prompt_id",
                              "speaker_id", "speaker", "district", "alliance"])
-            recs = (Recording.objects.filter(status="accepted")
+            recs = (Recording.objects.filter(status="accepted").exclude(audio="")
                     .select_related("prompt", "user__profile__district__alliance").order_by("pk"))
             for rec in recs.iterator():
                 writer.writerow([rec.pk, rec.audio.name, rec.spoken_text, rec.duration, rec.prompt.source,

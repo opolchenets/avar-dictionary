@@ -30,7 +30,7 @@ def next_prompt_for(user):
 
 class ReadingHomeView(View):
     def get(self, request):
-        source_rows = list(Prompt.objects.filter(is_active=True).values("source").annotate(
+        source_rows = list(Prompt.objects.values("source").annotate(
             total=Count("id"), done=Count("recordings__prompt_id", filter=Q(recordings__status="accepted"), distinct=True),
             accepted_recordings=Count("recordings", filter=Q(recordings__status="accepted"))
         ).order_by("source"))
@@ -40,7 +40,7 @@ class ReadingHomeView(View):
         for row in source_rows:
             row["label"] = row["source"] or "Без указания источника"
             row["minutes"] = round(source_minutes.get(row["label"], 0), 1)
-        ctx = {"total": Prompt.objects.filter(is_active=True).count(),
+        ctx = {"total": Prompt.objects.count(),
                "done": Prompt.objects.filter(recordings__status="accepted").distinct().count(),
                "minutes": round((Recording.objects.filter(status="accepted").aggregate(s=Sum("duration"))["s"] or 0) / 60, 1),
                "reading_sources": source_rows}
