@@ -23,7 +23,8 @@ class ClipHomeView(View):
         total = Clip.objects.filter(is_gold=False).count()
         done = Clip.objects.filter(is_gold=False, status=Clip.Status.RESOLVED).count()
         ctx = {
-            "total": total, "done": done, "left": total - done,
+            "total": total, "done": done,
+            "left": Clip.objects.filter(is_gold=False, batch__is_open=True, status=Clip.Status.OPEN).exclude(audio="").count(),
             "pending": ClipEdit.objects.filter(Q(verdict="pending") | Q(verdict="accepted", reviewed_by__isnull=True, auto_accepted=False)).count(),
             "batches": Batch.objects.annotate(
                 n=Count("clips", distinct=True, filter=Q(clips__is_gold=False)),
@@ -54,7 +55,7 @@ class NextClipView(LoginRequiredMixin, View):
 
 class ClipEditView(LoginRequiredMixin, View):
     def get(self, request, pk):
-        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True)
+        clip = get_object_or_404(Clip, pk=pk, batch__is_open=True, audio__gt="")
         mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
         # править можно только открытый фрагмент; после решения (совпало / редактор) правка закрыта
         retry = mine is not None and mine.verdict == ClipEdit.Verdict.REDO

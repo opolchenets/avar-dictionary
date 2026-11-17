@@ -18,13 +18,13 @@ class Command(BaseCommand):
         with (directory / "transcriptions.csv").open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["id", "audio", "text", "seconds", "source", "kind"])
-            for clip in Clip.objects.filter(is_gold=False, status="resolved").exclude(final_text="").select_related("batch").iterator():
+            for clip in Clip.objects.filter(is_gold=False, status="resolved").exclude(final_text="").exclude(audio="").select_related("batch").iterator():
                 writer.writerow([clip.pk, clip.audio.name, fix_palochka(clip.final_text), clip.duration, clip.batch.source, "transcription"])
             for clip in Clip.objects.filter(is_gold=True).exclude(gold_text="").select_related("batch").iterator():
                 writer.writerow([clip.pk, clip.audio.name, fix_palochka(clip.gold_text), clip.duration, clip.batch.source, "reference"])
         with (directory / "recordings.csv").open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow(["id", "audio", "text", "seconds", "source", "speaker_id"])
-            for rec in Recording.objects.filter(status="accepted").select_related("prompt").iterator():
+            for rec in Recording.objects.filter(status="accepted").exclude(audio="").select_related("prompt").iterator():
                 writer.writerow([rec.pk, rec.audio.name, fix_palochka(rec.spoken_text), rec.duration, rec.prompt.source, rec.user_id])
         self.stdout.write(self.style.SUCCESS(str(directory)))
