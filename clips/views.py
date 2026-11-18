@@ -74,11 +74,11 @@ class ClipEditView(LoginRequiredMixin, View):
             request.session["skip_clip_once"] = clip.pk
             messages.success(request, "Проблема передана редактору. Текст правки не отправлен, рейтинг не изменён.")
             return redirect("clip-next")
-        text = request.POST.get("text", "").strip()
+        text = request.POST.get("text", "")
         if request.POST.get("action") == "skip":
             request.session["skip_clip_once"] = clip.pk
             return redirect("clip-next")
-        if not text:
+        if not text.strip():
             messages.error(request, "Текст пустой. Если в записи нет речи, напишите «#».")
             return redirect("clip-edit", pk=pk)
         mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
@@ -140,7 +140,10 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
         status, _ = self.selected_filters()
         edits = self.by_status(self.submissions(), status)
         return (Clip.objects.filter(edits__in=edits).distinct().select_related("batch")
-                .prefetch_related(Prefetch("edits", queryset=edits, to_attr="review_edits")))
+                .prefetch_related(
+                    Prefetch("edits", queryset=edits, to_attr="review_edits"),
+                    Prefetch("edits", queryset=self.submissions(), to_attr="comparison_edits"),
+                ))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -161,9 +164,9 @@ class ResolveView(UserPassesTestMixin, View):
 
     def post(self, request, pk):
         clip = get_object_or_404(Clip, pk=pk)
-        text = request.POST.get("text", "").strip()
+        text = request.POST.get("text", "")
         back = get_safe_redirect(request, reverse("clip-review"))
-        if not text:
+        if not text.strip():
             return redirect(back)
         if clip.is_gold:
             resolve(clip, text, request.user)
