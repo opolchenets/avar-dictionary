@@ -10,18 +10,26 @@
     <a class="button ghost" href="/admin/clips/batch/">Пачки</a>
   </div>
   <p class="mod-info-label">После трёх ответов согласованные версии могут быть приняты автоматически. Ответы без решения остаются в очереди редактора.</p>
+  <form method="get" class="action-row">
+    <input type="hidden" name="status" value="{{ status }}">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <label for="clip-search">Поиск по номеру или тексту</label>
+    <input id="clip-search" name="q" value="{{ search_query }}" placeholder="#1234 или слова из фразы" maxlength="200">
+    <button class="button small-button" type="submit">Найти</button>
+    {% if search_query %}<a class="button ghost" href="{% querystring status=status kind=kind q=None page=None %}">Сбросить</a>{% endif %}
+  </form>
   <div class="category-tabs">
-    <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="?status=pending&amp;kind={{ kind }}">Ждут оценки ({{ counts.pending }})</a>
-    <a class="category-tab {% if status == 'redo' %}is-active{% endif %}" href="?status=redo&amp;kind={{ kind }}">На исправлении ({{ counts.redo }})</a>
-    <a class="category-tab {% if status == 'accepted' %}is-active{% endif %}" href="?status=accepted&amp;kind={{ kind }}">Приняты ({{ counts.accepted }})</a>
-    <a class="category-tab {% if status == 'rejected' %}is-active{% endif %}" href="?status=rejected&amp;kind={{ kind }}">Отклонены ({{ counts.rejected }})</a>
-    <a class="category-tab {% if status == 'all' %}is-active{% endif %}" href="?status=all&amp;kind={{ kind }}">Все отправленные ({{ counts.all }})</a>
+    <a class="category-tab {% if status == 'pending' %}is-active{% endif %}" href="{% querystring status="pending" kind=kind page=None %}">Ждут оценки ({{ counts.pending }})</a>
+    <a class="category-tab {% if status == 'redo' %}is-active{% endif %}" href="{% querystring status="redo" kind=kind page=None %}">На исправлении ({{ counts.redo }})</a>
+    <a class="category-tab {% if status == 'accepted' %}is-active{% endif %}" href="{% querystring status="accepted" kind=kind page=None %}">Приняты ({{ counts.accepted }})</a>
+    <a class="category-tab {% if status == 'rejected' %}is-active{% endif %}" href="{% querystring status="rejected" kind=kind page=None %}">Отклонены ({{ counts.rejected }})</a>
+    <a class="category-tab {% if status == 'all' %}is-active{% endif %}" href="{% querystring status="all" kind=kind page=None %}">Все отправленные ({{ counts.all }})</a>
   </div>
   <div class="category-tabs" aria-label="Тип фрагментов">
     <span class="mod-info-label">Тип:</span>
-    <a class="category-tab {% if kind == 'all' %}is-active{% endif %}" href="?status={{ status }}&amp;kind=all">Все фрагменты</a>
-    <a class="category-tab {% if kind == 'new' %}is-active{% endif %}" href="?status={{ status }}&amp;kind=new">Обычные</a>
-    <a class="category-tab {% if kind == 'gold' %}is-active{% endif %}" href="?status={{ status }}&amp;kind=gold">Контрольные</a>
+    <a class="category-tab {% if kind == 'all' %}is-active{% endif %}" href="{% querystring status=status kind="all" page=None %}">Все фрагменты</a>
+    <a class="category-tab {% if kind == 'new' %}is-active{% endif %}" href="{% querystring status=status kind="new" page=None %}">Обычные</a>
+    <a class="category-tab {% if kind == 'gold' %}is-active{% endif %}" href="{% querystring status=status kind="gold" page=None %}">Контрольные</a>
   </div>
 
   {% for c in clips %}
@@ -34,7 +42,7 @@
         {% if c.status == 'agreed' %}<span class="mod-info-label">Предварительно: варианты совпали</span>{% elif c.status == 'disputed' %}<span class="mod-info-label">Предварительно: варианты разошлись</span>{% endif %}{% endif %}
       </span>
     </div>
-    <audio src="{{ c.audio.url }}" controls preload="none" style="width:100%"></audio>
+    {% if c.audio %}<audio src="{{ c.audio.url }}" controls preload="none" style="width:100%"></audio>{% endif %}
     <div class="info-rows" style="margin-top:10px">
       <div class="info-row"><span class="mod-info-label">Черновик ASR</span><span>{{ c.draft_text }}</span></div>
       {% if c.is_gold %}<div class="info-row"><span class="mod-info-label">Эталон</span><span>{{ c.gold_text }}</span></div>
@@ -76,13 +84,13 @@
     </form>
   </div>
   {% empty %}
-    <p class="empty-state">Здесь пусто.</p>
+    <p class="empty-state">{% if search_query %}Ничего не найдено в этой вкладке.{% else %}Здесь пусто.{% endif %}</p>
   {% endfor %}
 
   {% if is_paginated %}<div class="pagination">
-    {% if page_obj.has_previous %}<a href="?status={{ status }}&amp;kind={{ kind }}&amp;page={{ page_obj.previous_page_number }}">←</a>{% endif %}
+    {% if page_obj.has_previous %}<a href="{% querystring status=status kind=kind page=page_obj.previous_page_number %}">←</a>{% endif %}
     <span>{{ page_obj.number }} / {{ paginator.num_pages }}</span>
-    {% if page_obj.has_next %}<a href="?status={{ status }}&amp;kind={{ kind }}&amp;page={{ page_obj.next_page_number }}">→</a>{% endif %}
+    {% if page_obj.has_next %}<a href="{% querystring status=status kind=kind page=page_obj.next_page_number %}">→</a>{% endif %}
   </div>{% endif %}
 </div>
 {% endblock %}

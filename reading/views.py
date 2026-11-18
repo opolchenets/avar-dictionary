@@ -174,11 +174,22 @@ class ReviewView(UserPassesTestMixin, ListView):
 
     def get_queryset(self):
         st = self.request.GET.get("status", "pending")
-        return Recording.objects.filter(status=st).select_related("prompt", "user", "user__profile").order_by("updated_at")
+        recordings = Recording.objects.filter(status=st)
+        query = self.request.GET.get("q", "").strip()[:200]
+        number = query.removeprefix("#")
+        if number.isascii() and number.isdecimal():
+            recordings = recordings.filter(pk=int(number))
+        elif query:
+            recordings = recordings.filter(
+                Q(text_snapshot__icontains=query)
+                | Q(text_snapshot="", prompt__text__icontains=query)
+            )
+        return recordings.select_related("prompt", "user", "user__profile").order_by("updated_at", "pk")
 
     def get_context_data(self, **kw):
         c = super().get_context_data(**kw)
         c["status"] = self.request.GET.get("status", "pending")
+        c["search_query"] = self.request.GET.get("q", "").strip()[:200]
         c["counts"] = {s: Recording.objects.filter(status=s).count() for s, _ in Recording.Status.choices}
         return c
 
