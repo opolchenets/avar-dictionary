@@ -1,3 +1,5 @@
+import unicodedata
+
 from django.conf import settings
 from django.db import models
 
@@ -53,11 +55,20 @@ class Clip(models.Model):
         return self.status == self.Status.RESOLVED
 
 
+def comparison_text(text):
+    text = unicodedata.normalize("NFC", text)
+    if text.strip() == "#":
+        return text
+    return "".join(
+        char for i, char in enumerate(text)
+        if not unicodedata.category(char).startswith("P")
+        or (char in "-‐‑" and 0 < i < len(text) - 1
+            and text[i - 1].isalpha() and text[i + 1].isalpha())
+    )
+
+
 def texts_match(a: str, b: str) -> bool:
-    """Тот же порог, что для проверочных: от 30 знаков — расхождение не больше 1 символа, короче — ни одного."""
-    errs = char_errors(a, b)
-    n = max(len(normalize(a)), len(normalize(b)))
-    return errs <= 1 if n >= 30 else errs == 0
+    return comparison_text(a) == comparison_text(b)
 
 
 def gold_is_correct(text: str, gold: str) -> bool:

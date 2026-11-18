@@ -40,7 +40,7 @@ class Command(BaseCommand):
                 matching = (ClipEdit.objects.filter(clip=clip, verdict="accepted", text=clip.final_text)
                             .select_related("user__profile__district__alliance").order_by("reviewed_at", "pk").first())
                 author = attribution(matching.user) if matching else ("", "", "", "")
-                decision = ("three_agreed" if matching.auto_accepted else "accepted_edit") if matching else "editor_text"
+                decision = ("auto_accepted" if matching.auto_accepted else "accepted_edit") if matching else "editor_text"
                 writer.writerow([clip.pk, clip.audio.name, clip.final_text, clip.duration,
                                  clip.batch.source, clip.batch.name, *author, decision])
                 totals[clip.batch.name]["items"] += 1
