@@ -4,7 +4,7 @@ from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from gamification.models import PointLedger
+from gamification.models import ArchivedRejection, PointLedger
 
 from common.normalizer import char_errors, similarity, fix_palochka
 
@@ -14,14 +14,19 @@ POINTS_ACCEPTED = 1
 
 
 def approval_rates(edits, clip_id):
-    history = ClipEdit.objects.filter(user_id__in={edit.user_id for edit in edits}).exclude(clip_id=clip_id)
+    user_ids = {edit.user_id for edit in edits}
+    history = ClipEdit.objects.filter(user_id__in=user_ids).exclude(clip_id=clip_id)
     history = history.filter(verdict__in=["accepted", "rejected"]).filter(
         Q(reviewed_by__isnull=False) | Q(auto_accepted=True))
-    return {
-        row["user_id"]: Fraction(row["accepted"], row["judged"])
+    counts = {
+        row["user_id"]: [row["accepted"], row["judged"]]
         for row in history.values("user_id").annotate(
             accepted=Count("pk", filter=Q(verdict="accepted")), judged=Count("pk"))
     }
+    archived = ArchivedRejection.objects.filter(kind="clip", user_id__in=user_ids).exclude(target_id=clip_id)
+    for row in archived.values("user_id").annotate(total=Count("pk")):
+        counts.setdefault(row["user_id"], [0, 0])[1] += row["total"]
+    return {user_id: Fraction(accepted, judged) for user_id, (accepted, judged) in counts.items()}
 
 
 def consensus_winners(edits, clip_id):

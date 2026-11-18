@@ -1,6 +1,7 @@
 """Remove collected audio/text payloads while retaining decisions and statistics."""
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
+from gamification.rejection_archive import preserve_rejections
 from django.db.models import Sum
 from django.db.models import Q
 
@@ -38,6 +39,7 @@ class Command(BaseCommand):
         if not apply:
             return
         with transaction.atomic():
+            preserve_rejections(ClipEdit.objects.all(), Recording.objects.all())
             ClipEdit.objects.filter(Q(verdict__in=["pending", "redo", "rejected"]) |
                                     Q(verdict="accepted", reviewed_by__isnull=True, auto_accepted=False)).delete()
             Recording.objects.exclude(status=Recording.Status.ACCEPTED).delete()
