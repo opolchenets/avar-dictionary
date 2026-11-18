@@ -139,7 +139,15 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
     def get_queryset(self):
         status, _ = self.selected_filters()
         edits = self.by_status(self.submissions(), status)
-        return (Clip.objects.filter(edits__in=edits).distinct().select_related("batch")
+        clips = Clip.objects.filter(edits__in=edits)
+        query = self.request.GET.get("q", "").strip()[:200]
+        number = query.removeprefix("#")
+        if number.isascii() and number.isdecimal():
+            clips = clips.filter(pk=int(number))
+        elif query:
+            matches = edits.filter(text__icontains=query).values("clip_id")
+            clips = clips.filter(Q(final_text__icontains=query) | Q(pk__in=matches))
+        return (clips.distinct().select_related("batch")
                 .prefetch_related(
                     Prefetch("edits", queryset=edits, to_attr="review_edits"),
                     Prefetch("edits", queryset=self.submissions(), to_attr="comparison_edits"),
@@ -150,6 +158,7 @@ class ReviewQueueView(UserPassesTestMixin, ListView):
         status, kind = self.selected_filters()
         edits = self.submissions()
         context.update(status=status, kind=kind,
+            search_query=self.request.GET.get("q", "").strip()[:200],
             suggest=self.request.session.get("clip_suggest"),
             counts={state: self.by_status(edits, state).count()
                     for state in ("pending", "redo", "accepted", "rejected", "all")})
