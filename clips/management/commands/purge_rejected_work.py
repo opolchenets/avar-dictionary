@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Sum
 
 from clips.models import ClipEdit
+from gamification.rejection_archive import preserve_rejections
 from reading.models import Recording
 
 
@@ -24,6 +25,7 @@ class Command(BaseCommand):
             self.stdout.write(f"PREVIEW: clip_edits={edits}; recordings={recordings}; recording_minutes={seconds / 60:.2f}; audio_files={len(paths)}; no changes")
             return
 
+        preserve_rejections(edit_qs, recording_qs)
         deleted_edits, _ = edit_qs.delete()
         deleted_recordings, _ = recording_qs.delete()
 

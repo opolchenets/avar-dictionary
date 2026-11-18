@@ -30,6 +30,8 @@ def _smooth(acc, judged, site):
 
 
 def user_rows():
+    from .models import ArchivedRejection
+
     User = get_user_model()
     ed = {r["user"]: r for r in ClipEdit.objects.values("user").annotate(
         acc=Count("id", filter=Q(verdict="accepted") & (Q(reviewed_by__isnull=False) | Q(auto_accepted=True))),
@@ -38,6 +40,9 @@ def user_rows():
         acc=Count("id", filter=Q(status="accepted")),
         judged=Count("id", filter=Q(status__in=["accepted", "rejected"])),
         sec=Sum("duration", filter=Q(status="accepted")))}
+    for row in ArchivedRejection.objects.values("user_id", "kind").annotate(total=Count("pk")):
+        counts = ed if row["kind"] == "clip" else rc
+        counts.setdefault(row["user_id"], {"acc": 0, "judged": 0, "sec": 0})["judged"] += row["total"]
     e_acc = sum(r["acc"] for r in ed.values()); e_j = sum(r["judged"] for r in ed.values())
     r_acc = sum(r["acc"] for r in rc.values()); r_j = sum(r["judged"] for r in rc.values())
     site_m = e_acc / e_j if e_j else 0.8

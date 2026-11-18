@@ -4,6 +4,18 @@ from django.db import models
 from corpus.models import Sentence
 
 
+class ArchivedRejection(models.Model):
+    kind = models.CharField(max_length=12)
+    submission_id = models.PositiveBigIntegerField()
+    target_id = models.PositiveBigIntegerField()
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("kind", "submission_id"), name="unique_archived_rejection"),
+        ]
+
+
 class Achievement(models.Model):
     name = models.CharField("Название", max_length=100)
     threshold = models.IntegerField("Порог (кол-во переводов)")

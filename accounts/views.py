@@ -130,11 +130,16 @@ def get_user_profile_data(user):
     }
 
 def _work_stats(user):
+    from gamification.models import ArchivedRejection
+
     e = ClipEdit.objects.filter(user=user)
     r = Recording.objects.filter(user=user)
     e_acc = e.filter(verdict="accepted").filter(Q(reviewed_by__isnull=False) | Q(auto_accepted=True)).count()
     e_j = e.filter(verdict__in=["accepted", "rejected"]).filter(Q(reviewed_by__isnull=False) | Q(auto_accepted=True)).count()
     r_acc, r_j = r.filter(status="accepted").count(), r.filter(status__in=["accepted", "rejected"]).count()
+    archived = ArchivedRejection.objects.filter(user=user)
+    e_j += archived.filter(kind="clip").count()
+    r_j += archived.filter(kind="recording").count()
     return {
         "w_edits": e.count(), "w_edits_acc": e_acc,
         "w_edits_pct": round(100 * e_acc / e_j) if e_j else None,
