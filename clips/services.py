@@ -8,7 +8,7 @@ from gamification.models import ArchivedRejection, PointLedger
 
 from common.normalizer import char_errors, similarity, fix_palochka
 
-from .models import AudioIssue, Clip, ClipEdit, comparison_text, texts_match
+from .models import AudioIssue, Clip, ClipEdit, ClipReviewEvent, comparison_text, texts_match
 
 POINTS_ACCEPTED = 1
 
@@ -63,18 +63,33 @@ def preferred_accepted_edit(clip, text):
 
 
 def next_clip_for(user, skip_clip_id=None):
-    """Issue-free unresolved clip that this participant has not edited."""
+    """Prioritize unfinished clips the participant has not answered."""
     redo = ClipEdit.objects.filter(user=user, verdict="redo", clip__batch__is_open=True).exclude(clip_id=skip_clip_id).order_by("reviewed_at", "pk").first()
     if redo:
         return redo.clip
-    done_ids = ClipEdit.objects.filter(user=user).values_list("clip_id", flat=True)
-    qs = (Clip.objects.filter(batch__is_open=True, status=Clip.Status.OPEN).exclude(audio="")
-          .exclude(id__in=done_ids).exclude(pk=skip_clip_id)
-          .exclude(id__in=AudioIssue.objects.filter(reviewed_at__isnull=True).values("clip_id"))
-          .annotate(n=Count("edits")))
-    # Фрагмент выбирается случайно из всех доступных: второго правщика подбирает случай,
-    # поэтому пары постоянно меняются и договориться «править вдвоём» нельзя.
-    return qs.order_by("?").first()
+    answered = ClipEdit.objects.filter(user=user).values("clip_id")
+    return (Clip.objects.filter(batch__is_open=True)
+            .filter(Q(status=Clip.Status.OPEN) | Q(status=Clip.Status.RESOLVED, collect_after_accept=True))
+            .exclude(audio="").exclude(pk=skip_clip_id).exclude(pk__in=answered)
+            .exclude(pk__in=AudioIssue.objects.filter(reviewed_at__isnull=True).values("clip_id"))
+            .annotate(answer_count=Count("edits"))
+            .filter(answer_count__lt=Clip.REQUIRED_EDITS)
+            .order_by("-answer_count", "pk").first())
+
+
+def can_submit(clip, existing):
+    if not clip.batch.is_open or not clip.audio:
+        return False
+    if existing and existing.verdict == ClipEdit.Verdict.REDO:
+        return True
+    if clip.status != Clip.Status.OPEN and not (
+        clip.status == Clip.Status.RESOLVED and clip.collect_after_accept
+    ):
+        return False
+    if existing:
+        return existing.verdict == ClipEdit.Verdict.PENDING
+    return (clip.edits.count() < Clip.REQUIRED_EDITS
+            and not clip.audio_issues.filter(reviewed_at__isnull=True).exists())
 
 
 @transaction.atomic
@@ -89,6 +104,10 @@ def set_verdict(edit, verdict, by=None):
     edit.reviewed_by, edit.reviewed_at = by, timezone.now()
     edit.save(update_fields=["verdict", "auto_accepted", "reviewed_by", "reviewed_at"])
     if verdict == ClipEdit.Verdict.ACCEPTED:
+        ClipReviewEvent.objects.create(
+            clip_number=edit.clip_id, edit_number=edit.pk, reviewer_name=by.get_username(),
+            action=ClipReviewEvent.Action.ACCEPT, text=edit.text, decided_at=edit.reviewed_at,
+        )
         PointLedger.objects.get_or_create(user=edit.user, reason=PointLedger.Reason.CLIP_ACCEPTED,
                                           clip=edit.clip, defaults={"points": POINTS_ACCEPTED})
     else:
@@ -99,8 +118,7 @@ def set_verdict(edit, verdict, by=None):
 def submit_edit(clip, user, text):
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
     existing = ClipEdit.objects.filter(clip=clip, user=user).first()
-    retry = existing is not None and existing.verdict == ClipEdit.Verdict.REDO
-    if not clip.batch.is_open or (not retry and (clip.status != Clip.Status.OPEN or (existing and existing.verdict != ClipEdit.Verdict.PENDING))):
+    if not can_submit(clip, existing):
         return "closed", existing
     text = fix_palochka(text)
     edit, _ = ClipEdit.objects.update_or_create(
@@ -110,24 +128,31 @@ def submit_edit(clip, user, text):
         edit.gold_score = similarity(text, clip.gold_text)
         edit.errors = char_errors(text, clip.gold_text)
         edit.save(update_fields=["gold_score", "errors"])
-        return "saved", edit
-    # Exact equality preserves spaces. Only one independent answer per user exists.
-    edits = list(clip.edits.filter(verdict=ClipEdit.Verdict.PENDING).order_by("pk"))
-    if clip.status == Clip.Status.OPEN and len(edits) >= Clip.REQUIRED_EDITS:
-        winning = [] if clip.audio_issues.filter(reviewed_at__isnull=True).exists() else consensus_winners(edits, clip.pk)
-        if winning:
-            clip.final_text, clip.status = winning[0].text, Clip.Status.RESOLVED
-            clip.save(update_fields=["final_text", "status", "updated_at"])
-            for candidate in winning:
-                candidate.verdict = ClipEdit.Verdict.ACCEPTED
-                candidate.auto_accepted = True
-                candidate.reviewed_at = timezone.now()
-                candidate.save(update_fields=["verdict", "auto_accepted", "reviewed_at"])
-                PointLedger.objects.get_or_create(user=candidate.user, reason=PointLedger.Reason.CLIP_ACCEPTED,
-                                                  clip=clip, defaults={"points": POINTS_ACCEPTED})
+    edits = list(clip.edits.all())
+    if len(edits) >= Clip.REQUIRED_EDITS:
+        clip.collect_after_accept = False
+        if clip.status == Clip.Status.OPEN:
+            if clip.is_gold:
+                clip.status = Clip.Status.DISPUTED
+                clip.save(update_fields=["status", "collect_after_accept", "updated_at"])
+            else:
+                pending = [candidate for candidate in edits if candidate.verdict == ClipEdit.Verdict.PENDING]
+                winning = [] if clip.audio_issues.filter(reviewed_at__isnull=True).exists() else consensus_winners(pending, clip.pk)
+                if winning:
+                    clip.final_text, clip.status = winning[0].text, Clip.Status.RESOLVED
+                    clip.save(update_fields=["final_text", "status", "collect_after_accept", "updated_at"])
+                    for candidate in winning:
+                        candidate.verdict = ClipEdit.Verdict.ACCEPTED
+                        candidate.auto_accepted = True
+                        candidate.reviewed_at = timezone.now()
+                        candidate.save(update_fields=["verdict", "auto_accepted", "reviewed_at"])
+                        PointLedger.objects.get_or_create(user=candidate.user, reason=PointLedger.Reason.CLIP_ACCEPTED,
+                                                          clip=clip, defaults={"points": POINTS_ACCEPTED})
+                else:
+                    clip.status = Clip.Status.DISPUTED
+                    clip.save(update_fields=["status", "collect_after_accept", "updated_at"])
         else:
-            clip.status = Clip.Status.DISPUTED
-            clip.save(update_fields=["status", "updated_at"])
+            clip.save(update_fields=["collect_after_accept", "updated_at"])
     return "saved", edit
 
 
@@ -142,9 +167,11 @@ def accept_edit(edit, by):
         set_verdict(edit, ClipEdit.Verdict.ACCEPTED, by)
         return
     set_verdict(edit, ClipEdit.Verdict.ACCEPTED, by)
+    if clip.status == Clip.Status.OPEN:
+        clip.collect_after_accept = clip.edits.count() < Clip.REQUIRED_EDITS
     winner = preferred_accepted_edit(clip, edit.text)
     clip.final_text, clip.status = winner.text, Clip.Status.RESOLVED
-    clip.save(update_fields=["final_text", "status", "updated_at"])
+    clip.save(update_fields=["final_text", "status", "collect_after_accept", "updated_at"])
 
 
 @transaction.atomic
@@ -159,8 +186,8 @@ def _nonaccepted_edit(edit, by, verdict):
         clip.status = Clip.Status.RESOLVED if approved else Clip.Status.OPEN
         clip.save(update_fields=["status", "final_text", "updated_at"])
     if not clip.is_gold and clip.status != Clip.Status.RESOLVED:
-        pending_count = clip.edits.filter(verdict=ClipEdit.Verdict.PENDING).count()
-        clip.status = Clip.Status.DISPUTED if pending_count >= Clip.REQUIRED_EDITS else Clip.Status.OPEN
+        answer_count = clip.edits.count()
+        clip.status = Clip.Status.DISPUTED if answer_count >= Clip.REQUIRED_EDITS else Clip.Status.OPEN
         clip.final_text = ""
         clip.save(update_fields=["status", "final_text", "updated_at"])
 
@@ -189,13 +216,22 @@ def resolve(clip, text, by=None):
     if by is None:
         raise ValueError("Saving a final text requires a named reviewer.")
     clip = Clip.objects.select_for_update().get(pk=clip.pk)
+    text = fix_palochka(text.strip())
+    previous = clip.gold_text if clip.is_gold else clip.final_text
+    if previous != text or (not clip.is_gold and clip.status != Clip.Status.RESOLVED):
+        ClipReviewEvent.objects.create(
+            clip_number=clip.pk, reviewer_name=by.get_username(),
+            action=ClipReviewEvent.Action.GOLD if clip.is_gold else ClipReviewEvent.Action.FINAL,
+            previous_text=previous, text=text, decided_at=timezone.now(),
+        )
     if clip.is_gold:
-        clip.gold_text = fix_palochka(text.strip())
+        clip.gold_text = text
         clip.save(update_fields=["gold_text", "updated_at"])
         reassess_gold_clip(clip)
         return
-    clip.final_text, clip.status = fix_palochka(text), Clip.Status.RESOLVED
-    clip.save(update_fields=["status", "final_text", "updated_at"])
+    clip.final_text, clip.status = text, Clip.Status.RESOLVED
+    clip.collect_after_accept = False
+    clip.save(update_fields=["status", "final_text", "collect_after_accept", "updated_at"])
     for e in clip.edits.all():
         set_verdict(e, ClipEdit.Verdict.ACCEPTED if texts_match(e.text, text) else ClipEdit.Verdict.REJECTED, by)
 

@@ -9,7 +9,7 @@
     <div><p class="eyebrow">Редактор</p><h1>Проверка фрагментов</h1></div>
     <a class="button ghost" href="/admin/clips/batch/">Пачки</a>
   </div>
-  <p class="mod-info-label">После трёх ответов согласованные версии могут быть приняты автоматически. Ответы без решения остаются в очереди редактора.</p>
+  <p class="mod-info-label">Совпадения ответов помогают при проверке. Решение принимает редактор. <a href="{% url 'clip-review-history' %}">История исправлений</a></p>
   <form method="get" class="action-row">
     <input type="hidden" name="status" value="{{ status }}">
     <input type="hidden" name="kind" value="{{ kind }}">

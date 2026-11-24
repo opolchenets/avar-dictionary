@@ -36,6 +36,7 @@ class Clip(models.Model):
     draft_text = models.TextField("Черновик (ASR)", blank=True)
     final_text = models.TextField("Итоговый текст", blank=True)
     status = models.CharField("Статус", max_length=20, choices=Status.choices, default=Status.OPEN)
+    collect_after_accept = models.BooleanField(default=False)
     is_gold = models.BooleanField("Контрольный", default=False)
     gold_text = models.TextField("Эталон (для контрольных)", blank=True)
     source_ref = models.CharField("Откуда (файл/блок)", max_length=255, blank=True)
@@ -131,3 +132,21 @@ class AudioIssue(models.Model):
         verbose_name = "Проблема в аудиофрагменте"
         verbose_name_plural = "Проблемы в аудиофрагментах"
         constraints = [models.UniqueConstraint(fields=("clip", "user"), name="one_audio_issue_per_user_clip")]
+
+
+class ClipReviewEvent(models.Model):
+    class Action(models.TextChoices):
+        ACCEPT = "accept", "Принята правка"
+        FINAL = "final", "Сохранён итог"
+        GOLD = "gold", "Изменён эталон"
+
+    clip_number = models.PositiveBigIntegerField()
+    edit_number = models.PositiveBigIntegerField(null=True, blank=True)
+    reviewer_name = models.CharField(max_length=150)
+    action = models.CharField(max_length=10, choices=Action.choices)
+    previous_text = models.TextField(blank=True)
+    text = models.TextField()
+    decided_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ("-decided_at", "-pk")

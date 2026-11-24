@@ -62,7 +62,9 @@ class CorrectionTests(TestCase):
         self.assertEqual(second.verdict, "accepted")
         self.assertEqual(self.edit.verdict, "pending")
         self.assertEqual(PointLedger.objects.count(), 1)
-        self.assertEqual(submit_edit(self.clip, self.editor, "forbidden")[0], "closed")
+        self.assertEqual(submit_edit(self.clip, self.editor, "third answer")[0], "saved")
+        extra = get_user_model().objects.create_user(username="extra")
+        self.assertEqual(submit_edit(self.clip, extra, "fourth answer")[0], "closed")
 
     def test_gold_retry_reassesses_hint_only_and_preserves_reference(self):
         self.clip.is_gold, self.clip.gold_text = True, "reference"

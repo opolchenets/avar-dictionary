@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}История исправлений · Avar Corpus{% endblock %}
+{% block content %}
+<h1>История исправлений</h1>
+<p><a href="{% url 'clip-review' %}">Очередь проверки</a></p>
+{% for event in events %}
+  <article class="card">
+    <h2>Фрагмент №{{ event.clip_number }} · {{ event.get_action_display }}</h2>
+    <p>{{ event.decided_at|date:"d.m.Y H:i" }} · {{ event.reviewer_name }}{% if event.edit_number %} · правка №{{ event.edit_number }}{% endif %}</p>
+    {% if event.previous_text %}<p><strong>Было</strong> {{ event.previous_text|linebreaksbr }}</p>{% endif %}
+    <p><strong>Текст решения</strong> {{ event.text|linebreaksbr }}</p>
+  </article>
+{% empty %}
+  <p>Принятых исправлений пока нет.</p>
+{% endfor %}
+{% if is_paginated %}
+  <nav aria-label="Страницы истории">
+    {% if page_obj.has_previous %}<a href="?page={{ page_obj.previous_page_number }}">Назад</a>{% endif %}
+    <span>{{ page_obj.number }} / {{ paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a href="?page={{ page_obj.next_page_number }}">Далее</a>{% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

@@ -7,8 +7,8 @@ from django.urls import reverse
 from django.views import View
 from django.views.generic import ListView
 
-from .models import AudioIssue, Batch, Clip, ClipEdit
-from .services import accept_edit, matching_edit, next_clip_for, resolve, reject_edit, request_correction, submit_edit, user_stats
+from .models import AudioIssue, Batch, Clip, ClipEdit, ClipReviewEvent
+from .services import accept_edit, can_submit, matching_edit, next_clip_for, resolve, reject_edit, request_correction, submit_edit, user_stats
 
 
 def is_editor(u):
@@ -48,7 +48,7 @@ class NextClipView(LoginRequiredMixin, View):
         skipped = request.session.pop("skip_clip_once", None)
         clip = next_clip_for(request.user, skip_clip_id=skipped)
         if not clip:
-            messages.info(request, "Свободных фрагментов пока нет — спасибо! Новая пачка скоро появится.")
+            messages.info(request, "Сейчас нет доступных вам фрагментов.")
             return redirect("clip-home")
         return redirect("clip-edit", pk=clip.pk)
 
@@ -57,9 +57,7 @@ class ClipEditView(LoginRequiredMixin, View):
     def get(self, request, pk):
         clip = get_object_or_404(Clip, pk=pk, batch__is_open=True, audio__gt="")
         mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
-        # править можно только открытый фрагмент; после решения (совпало / редактор) правка закрыта
-        retry = mine is not None and mine.verdict == ClipEdit.Verdict.REDO
-        locked = not retry and (clip.status != Clip.Status.OPEN or (mine is not None and mine.verdict != ClipEdit.Verdict.PENDING))
+        locked = not can_submit(clip, mine)
         return render(request, "clips/clip_edit.html", {
             "clip": clip, "mine": mine, "locked": locked,
             "is_editor": is_editor(request.user),
@@ -81,11 +79,6 @@ class ClipEditView(LoginRequiredMixin, View):
         if not text.strip():
             messages.error(request, "Текст пустой. Если в записи нет речи, напишите «#».")
             return redirect("clip-edit", pk=pk)
-        mine = ClipEdit.objects.filter(clip=clip, user=request.user).first()
-        retry = mine is not None and mine.verdict == ClipEdit.Verdict.REDO
-        if not retry and (clip.status != Clip.Status.OPEN or (mine and mine.verdict != ClipEdit.Verdict.PENDING)):
-            messages.info(request, "Этот фрагмент уже закрыт.")
-            return redirect("clip-next")
         result, _ = submit_edit(clip, request.user, text)
         if result == "closed":
             messages.info(request, "Этот фрагмент уже закрыт.")
@@ -215,3 +208,13 @@ class VerdictView(UserPassesTestMixin, View):
                 messages.success(request, f"Фрагмент #{edit.clip_id}: правка возвращена участнику на исправление.")
         request.session.pop("clip_suggest", None)
         return redirect(get_safe_redirect(request, reverse("clip-review")))
+
+
+class ClipReviewHistoryView(UserPassesTestMixin, ListView):
+    model = ClipReviewEvent
+    template_name = "clips/review_history.html"
+    context_object_name = "events"
+    paginate_by = 50
+
+    def test_func(self):
+        return is_editor(self.request.user)
